@@ -1,0 +1,176 @@
+CREATE TABLE public.useraccount
+(
+    id SERIAL,
+    username character varying(80) COLLATE pg_catalog."default" NOT NULL,
+    userid character varying(100) COLLATE pg_catalog."default",
+    created TIMESTAMP WITH TIME ZONE,
+    lastlogin TIMESTAMP WITH TIME ZONE,
+    disabled boolean,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT useraccount_pkey PRIMARY KEY (username)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.useraccount
+    OWNER to postgres;
+--------------------------------------------------
+
+ALTER TABLE public.useraccount
+    ADD COLUMN createdby varchar(80) references useraccount(username);
+
+ALTER TABLE public.useraccount
+    ADD CONSTRAINT createdby_username_fkey FOREIGN KEY (createdby)
+    REFERENCES public.useraccount (username) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+
+--------------------------------------------------
+CREATE TABLE public.rolelist
+(
+    id SERIAL,
+    rolename varchar(100) NOT NULL,    
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT rolelist_pkey PRIMARY KEY (rolename)
+)
+
+-------------------------------------------------------
+CREATE TABLE public.roleassignment
+(
+    id serial NOT NULL,
+    username varchar(80) references useraccount(username),
+    rolename varchar(80) references rolelist(rolename),    
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT roleassignment_pkey PRIMARY KEY (id)
+)
+
+---------------------------------------------------------
+CREATE TABLE public.permissionlist
+(
+    id SERIAL,
+    permissionname varchar(100) NOT NULL,    
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT permissionlist_pkey PRIMARY KEY (permissionname)
+)
+
+-------------------------------------------------------
+CREATE TABLE public.permissionassignment
+(
+    id serial NOT NULL,
+    permissionname varchar(80) references permissionlist(permissionname),
+    rolename varchar(80) references rolelist(rolename),    
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT permissionassignment_pkey PRIMARY KEY (id)
+)
+-------------------------------------------------------
+CREATE TABLE public.resourcetypes
+(
+    id serial NOT NULL,
+    resourcetype varchar(200) NOT NULL,
+    displayname varchar(200) NOT NULL,
+    viewpermission varchar(80) references permissionlist(permissionname),
+    bookpermission varchar(80) references permissionlist(permissionname), 
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourcetypes_pkey PRIMARY KEY (resourcetype)
+)
+
+-------------------------------------------------------
+CREATE TABLE public.resourcelist
+(
+    id serial NOT NULL,
+    resourceid varchar(80) NOT NULL,
+    displayname varchar(200) NOT NULL,
+    type varchar(80) references resourcetypes(resourcetype),
+    viewpermission varchar(80) references permissionlist(permissionname),
+    bookpermission varchar(80) references permissionlist(permissionname),
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourcelist_pkey PRIMARY KEY (resourceid)
+)
+
+-------------------------------------------------------
+CREATE TABLE public.resourcetaglist
+(
+    id serial NOT NULL,
+    tagid varchar(200) NOT NULL,
+    displayname varchar(200) NOT NULL,
+    type varchar(80) references resourcetypes(resourcetype),    
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourcetaglist_pkey PRIMARY KEY (id)
+)
+
+-------------------------------------------------------
+CREATE TABLE public.resourcetagvalues
+(
+    id serial NOT NULL,
+    resource varchar(80) references resourcelist(resourceid),
+    tagid INT references resourcetaglist(id),
+    value varchar(200),
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourcetagvalues_pkey PRIMARY KEY (id)
+)
+
+
+-------------------------------------------------------
+//possible restriction types: 
+//    by account (e.g. max 2hr/day/account )
+//    by resource (e.g. max 8hr/day/resource )
+//    by range (e.g. 9am-5pm/on each weekday close on weekend OR from sep1 to dec30 etc)
+//    by occurrence (e.g. 3 time/week)
+//restrictiontypes in v1:
+//    min span
+//    max span
+//    available range on each weekday, can specify a starting and end date.
+
+
+CREATE TABLE public.restrictiontypes
+(
+    id serial NOT NULL,
+    type varchar(200) NOT NULL,
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT restrictiontypes_pkey PRIMARY KEY (type)
+)
+
+-------------------------------------------------------
+
+CREATE TABLE public.restrictions
+(
+    id serial NOT NULL,
+    restrictionid varchar(80) NOT NULL,
+    type varchar(200) NOT NULL references restrictiontypes(type),      
+    resourcetype varchar(200) references resourcetypes(resourcetype),
+    resrouce varchar(80) references resourcelist(resourceid),
+    restag varchar(200),
+    restagvalue varchar(200),
+    userperm varchar(100) references permissionlist(permissionname),
+    restrictionvalue text,
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT restrictions_pkey PRIMARY KEY (restrictionid)
+)
+
+
+-------------------------------------------------------
+CREATE TABLE public.resourcebooking
+(
+    id serial NOT NULL,
+    resource varchar(200) references resourcelist(resourceid),
+    bookedforuser varchar(80) references useraccount(username),
+    bookstart TIMESTAMP WITH TIME ZONE,
+    bookend TIMESTAMP WITH TIME ZONE,
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourcebooking_pkey PRIMARY KEY (id)
+)
