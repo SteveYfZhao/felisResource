@@ -8,7 +8,7 @@ import (
 
 )
 
-func CreateRestrcitionType(r *http.Request){	
+func CreateRestrcitionType(w http.ResponseWriter, r *http.Request){	
 	typename := r.Form.Get("typename")
 	currentuser, err := GetUserNamefromCookie(r)
 	if err != nil {
@@ -21,7 +21,7 @@ func CreateRestrcitionType(r *http.Request){
 
 }
 
-func CreateRestrcition(r *http.Request){
+func CreateRestrcition(w http.ResponseWriter, r *http.Request){
 	restrictionid := r.Form.Get("restrictionid")
 	restrictiontype := r.Form.Get("restrictiontype")
 	restrictionvalue := r.Form.Get("restrictionvalue")
@@ -43,7 +43,7 @@ func CreateRestrcition(r *http.Request){
 
 }
 
-func UpdateRestrcition(r *http.Request){
+func UpdateRestrcition(w http.ResponseWriter, r *http.Request){
 	restrictionid := r.Form.Get("restrictionid")
 	restrictiontype := r.Form.Get("restrictiontype")
 	restrictionvalue := r.Form.Get("restrictionvalue")
@@ -60,9 +60,43 @@ func UpdateRestrcition(r *http.Request){
 	fmt.Println("hit CreateRestrcition")
 }
 
-func RemoveRestriction (r *http.Request){
+func UpdateRestrcition (w http.ResponseWriter, r *http.Request){
 	id := r.Form.Get("id")
 	db:= GetDBHandle()
 	db.QueryRow("DELETE FROM restrictions WHERE id = $1);", id)	
 	fmt.Println("hit RemoveRestriction")
+}
+
+func GetRestrictionValuesCL(w http.ResponseWriter, r *http.Request){
+	
+	resourcetype := r.Form.Get("resourcetype")
+	resource := r.Form.Get("resource")
+	restag := r.Form.Get("restag")
+	restagvalue := r.Form.Get("restagvalue")
+	currentuser, err := GetUserNamefromCookie(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	userperm := GetAllPermsofUser(currentuser)
+	rvalues := GetRestrictionValuesCore(resourcetype, resource, restag, restagvalue, userperm)
+
+	fmt.Fprintf(w, rvalues)
+	fmt.Println("hit GetRestrictionValuesCL")
+
+}
+
+func GetRestrictionValuesCore(resourcetype, resource, restag, restagvalue string, userperm []string) string {
+	db:= GetDBHandle()
+	var rvalue string
+	err := db.QueryRow(`SELECT type, restrictionvalue FROM restrictions WHERE 
+		(resourcetype=$1 OR resourcetype = '') AND 
+		(resource = $2 OR resource = '') AND
+		(restag = $3 OR restag = '') AND
+		(restagvalue = $4 OR restagvalue = '') AND 
+		(userperm = "" OR userperm IN $5)
+		`, resourcetype, resource, restag, restagvalue, userperm).Scan(&rvalue)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return rvalue
 }

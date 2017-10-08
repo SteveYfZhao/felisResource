@@ -144,7 +144,7 @@ CREATE TABLE public.restrictiontypes
 )
 
 -------------------------------------------------------
-
+// if user has multiple perm, if one perm allows and one perm denies, then the allowing perm override the denial.
 CREATE TABLE public.restrictions
 (
     id serial NOT NULL,
