@@ -148,17 +148,17 @@ CREATE TABLE public.restrictiontypes
 CREATE TABLE public.restrictions
 (
     id serial NOT NULL,
-    restrictionid varchar(80) NOT NULL,
+    restrictionid varchar(80),
     type varchar(200) NOT NULL references restrictiontypes(type),      
     resourcetype varchar(200) references resourcetypes(resourcetype),
-    resrouce varchar(80) references resourcelist(resourceid),
+    resource varchar(80) references resourcelist(resourceid),
     restag varchar(200),
     restagvalue varchar(200),
     userperm varchar(100) references permissionlist(permissionname),
-    restrictionvalue text,
+    restrictionvalue text NOT NULL,
     created TIMESTAMP WITH TIME ZONE,
     createdby varchar(80) references useraccount(username),
-    CONSTRAINT restrictions_pkey PRIMARY KEY (restrictionid)
+    CONSTRAINT restrictions_pkey PRIMARY KEY (id)
 )
 
 

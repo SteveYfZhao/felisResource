@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+//TODO: Add remove and edit logic for everything
+
 func createUser(r *http.Request) {
 	username := r.Form.Get("username")
 	db:= GetDBHandle()
@@ -83,9 +85,19 @@ func assignRoletoPerm(r *http.Request) {
 }
 
 func removeRolefromUser(r *http.Request) {
-	//username := r.Form.Get("username")
-	//rolename := r.Form.Get("rolename")
+	db:= GetDBHandle()
+	username := r.Form.Get("username")
+	rolename := r.Form.Get("rolename")
+	db.QueryRow("DELETE FROM roleassignment WHERE username = $1 AND rolename =$2);", username, rolename)	
 	fmt.Println("hit removeRolefromUser")
+}
+
+func removeRolefromPerm(r *http.Request) {
+	db:= GetDBHandle()
+	permissionname := r.Form.Get("permissionname")
+	rolename := r.Form.Get("rolename")
+	db.QueryRow("DELETE FROM permissionassignment WHERE permissionname = $1 AND rolename =$2);", permissionname, rolename)	
+	fmt.Println("hit removeRolefromPerm")
 }
 
 func HasRole(username string, rolename string) bool {
