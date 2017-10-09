@@ -139,26 +139,28 @@ func HasPermission(username string, permission string) bool {
 
 func GetAllRolesOfUser(username string) []string {
 	db:= GetDBHandle()
-	var roles []string
-	err := db.QueryRow("SELECT rolename FROM roleassignment WHERE username=$1", username).Scan(&roles)
+	
+	rows, err := db.Query("SELECT rolename FROM roleassignment WHERE username=$1", username)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	roles:=rowsToStringSlice(rows)
     return roles
 }
 
 func GetAllPermsOfRole(rolename string) []string {
-	db:= GetDBHandle()
-	var perms []string
-	err := db.QueryRow("SELECT permissionname FROM permissionassignment WHERE rolename=$1", rolename).Scan(&perms)
+	db:= GetDBHandle()	
+	rows, err := db.Query("SELECT permissionname FROM permissionassignment WHERE rolename=$1", rolename)
 	if err != nil {
 		log.Fatal(err)
 	}
+	perms:=rowsToStringSlice(rows)
     return perms
 }
 
 func GetAllPermsofUser(username string) [] string {
-	db:= GetDBHandle()
+	
 	var perms []string
 	roles:= GetAllRolesOfUser(username)
 	for _, role := range roles{
