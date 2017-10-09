@@ -24,7 +24,7 @@ func AddUserPermHandler(){
 		CreateRestrcitionType,
 		CreateRestrcition,
 		UpdateRestrcition,
-		UpdateRestrcition,
+		RemoveRestrcition,
 		GetRestrictionValuesCL,
 	}
 	reqSuperAdmin := []func(http.ResponseWriter, *http.Request){

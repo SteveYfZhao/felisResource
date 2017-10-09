@@ -4,7 +4,7 @@ import (
 	"fmt"
 	//"regexp"
 	//"strings"
-	//"log"
+	"log"
 	"database/sql"
 	_ "github.com/lib/pq"
 )
@@ -37,4 +37,17 @@ func CloseDBHandle() {
 
 func createInitialTables(){
 	
+}
+
+func rowsToStringSlice(rows *sql.Rows) []string {
+	var result []string
+	for rows.Next() {
+		var row string
+		err := rows.Scan(&row)
+		if err != nil {
+			log.Fatal(err)
+		}
+		result = append(result, row)
+	}
+	return result
 }

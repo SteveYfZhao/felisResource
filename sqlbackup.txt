@@ -54,7 +54,7 @@ CREATE TABLE public.roleassignment
 CREATE TABLE public.permissionlist
 (
     id SERIAL,
-    permissionname varchar(100) NOT NULL,    
+    permissionname varchar(80) NOT NULL,    
     created TIMESTAMP WITH TIME ZONE,
     createdby varchar(80) references useraccount(username),
     CONSTRAINT permissionlist_pkey PRIMARY KEY (permissionname)
@@ -87,14 +87,14 @@ CREATE TABLE public.resourcetypes
 CREATE TABLE public.resourcelist
 (
     id serial NOT NULL,
-    resourceid varchar(80) NOT NULL,
+    resourceid varchar(80),
     displayname varchar(200) NOT NULL,
     type varchar(80) references resourcetypes(resourcetype),
     viewpermission varchar(80) references permissionlist(permissionname),
     bookpermission varchar(80) references permissionlist(permissionname),
     created TIMESTAMP WITH TIME ZONE,
     createdby varchar(80) references useraccount(username),
-    CONSTRAINT resourcelist_pkey PRIMARY KEY (resourceid)
+    CONSTRAINT resourcelist_pkey PRIMARY KEY (id)
 )
 
 -------------------------------------------------------
@@ -113,7 +113,7 @@ CREATE TABLE public.resourcetaglist
 CREATE TABLE public.resourcetagvalues
 (
     id serial NOT NULL,
-    resource varchar(80) references resourcelist(resourceid),
+    resource INT references resourcelist(id),
     tagid INT references resourcetaglist(id),
     value varchar(200),
     created TIMESTAMP WITH TIME ZONE,
@@ -151,7 +151,7 @@ CREATE TABLE public.restrictions
     restrictionid varchar(80),
     type varchar(200) NOT NULL references restrictiontypes(type),      
     resourcetype varchar(200) references resourcetypes(resourcetype),
-    resource varchar(80) references resourcelist(resourceid),
+    resource INT references resourcelist(id),
     restag varchar(200),
     restagvalue varchar(200),
     userperm varchar(100) references permissionlist(permissionname),
@@ -166,7 +166,7 @@ CREATE TABLE public.restrictions
 CREATE TABLE public.resourcebooking
 (
     id serial NOT NULL,
-    resource varchar(200) references resourcelist(resourceid),
+    resource INT references resourcelist(id),
     bookedforuser varchar(80) references useraccount(username),
     bookstart TIMESTAMP WITH TIME ZONE,
     bookend TIMESTAMP WITH TIME ZONE,
@@ -174,3 +174,30 @@ CREATE TABLE public.resourcebooking
     createdby varchar(80) references useraccount(username),
     CONSTRAINT resourcebooking_pkey PRIMARY KEY (id)
 )
+
+-------------------------------------------------------
+// currently only support repeat weekly, available hours can vary by weekdays.
+// monthly and individual date support will be added later.
+
+CREATE TABLE public.resourceavailabletime
+(
+    id serial NOT NULL,
+    resource INT references resourcelist(id),
+    resourcetype varchar(200) references resourcetypes(resourcetype),
+    rulestartdate TIMESTAMP WITH TIME ZONE,
+    ruleenddate TIMESTAMP WITH TIME ZONE,
+    availstarttime TIMESTAMP WITH TIME ZONE,
+    availendtime TIMESTAMP WITH TIME ZONE,
+    endonnextday boolean,
+    freq varchar(80),
+    bywkday varchar(80),
+    bydate varchar(200),
+    userperm varchar(80) references permissionlist(permissionname),
+    created TIMESTAMP WITH TIME ZONE,
+    createdby varchar(80) references useraccount(username),
+    CONSTRAINT resourceavailabletime_pkey PRIMARY KEY (id)
+)
+
+// alternative plan if the rules are getting too complicatied for client to use. 
+// Generate a table containing all days in a year and use the available time table to prepopulate the date table.
+// allow user to adjust individual days after 
