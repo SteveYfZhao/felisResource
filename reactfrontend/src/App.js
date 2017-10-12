@@ -1,4 +1,7 @@
+import 'rc-calendar/assets/index.css';
 import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
+import Calendar from 'rc-calendar';
 import logo from './logo.svg';
 import './App.css';
 
@@ -15,13 +18,24 @@ class App extends Component {
           <img src={logo} className="App-logo" alt="logo" />
           <h1 className="App-title">Felis Resource Management System</h1>
         </header>
-        <p className="App-intro">
+            <Button>Login</Button>
+        {/*<p className="App-intro">
           To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>Find available resource today.</p>
-        <Button>
-        Click Here
-        </Button>
+         </p>*/}
+
+         <div class="ui celled grid">
+         <div class="row">
+           <div class="three wide column">
+               <p>Find available resource today.</p>
+               <Calendar />
+               
+           </div>
+           <div class="thirteen wide column">
+             <img class="ui image" src="/assets/images/wireframe/centered-paragraph.png" />
+           </div>
+         </div>         
+       </div>
+        
       </div>
     );
   }
