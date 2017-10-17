@@ -4,10 +4,23 @@ import ReactDOM from 'react-dom';
 import Calendar from 'rc-calendar';
 import logo from './logo.svg';
 import './App.css';
-import { Button, Grid, Icon, Label, Menu, Table } from 'semantic-ui-react';
+import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox } from 'semantic-ui-react';
 
 var moment = require('moment');
-
+const hourInput = () => (
+  <Input placeholder='1' />
+)
+const fromhourInput = () => (
+  <Input placeholder='12' />
+)
+const apoptions = [
+  { key: 'AM', text: 'AM', value: 'AM' },
+  { key: 'PM', text: 'PM', value: 'PM' },
+]
+const halfhouroptions = [
+  { key: '00', text: '00', value: '00' },
+  { key: '30', text: '30', value: '30' },
+]
 
   class App extends Component {
     render() {
@@ -37,8 +50,20 @@ var moment = require('moment');
           <Grid celled>
             <Grid.Row>
               <Grid.Column width={3}>
-                <p>Find available resource today.</p>
+                <p>Select date"</p>
                 <Calendar />
+                <div>
+                  <Button>Only show rooms available</Button>
+                  <p>for at least <input placeholder='1' size = '2'/> hour</p>
+                  <p>from <Input type='text' size='mini' placeholder='12' action>
+                  <input size = '2'/>
+                  <Select compact options={halfhouroptions} defaultValue='00' />
+                  <Select compact options={apoptions} defaultValue='PM' />
+                </Input></p>
+
+                  <Divider horizontal>Or</Divider>
+                  <Button>Show all</Button>
+                </div>
               </Grid.Column>
               <Grid.Column width={13}>
                 
