@@ -22,6 +22,11 @@ ALTER TABLE public.useraccount
     ADD COLUMN createdby varchar(80) references useraccount(username);
 
 ALTER TABLE public.useraccount
+    ADD COLUMN passwordhash nvarchar(200);
+    ADD COLUMN salt nvarchar(200);
+    ADD COLUMN usertype nvarchar(80);
+
+ALTER TABLE public.useraccount
     ADD CONSTRAINT createdby_username_fkey FOREIGN KEY (createdby)
     REFERENCES public.useraccount (username) MATCH SIMPLE
     ON UPDATE NO ACTION
