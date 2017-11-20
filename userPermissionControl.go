@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha1"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -28,6 +29,31 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) {
 	db := GetDBHandle()
 	db.QueryRow("INSERT INTO useraccount(username,userid,created,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6) returning id;", username, "", time.Now(), email, salt, passwordHash)
 	fmt.Println("hit createUser")
+}
+
+func userPwLogin(w http.ResponseWriter, r *http.Request) {
+	username := r.Form.Get("username")
+	var pwHash, email, salt string
+	db := GetDBHandle()
+	row := db.QueryRow("SELECT email,salt,passwordhash FROM useraccount WHERE username=$1;", username)
+	err := row.Scan(&email, &salt, &pwHash)
+
+	if err == nil {
+		hasher := sha1.New()
+		hasher.Write([]byte(email + r.Form.Get("password") + salt))
+		passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+		if passwordHash == pwHash {
+			fmt.Println("login success")
+
+		} else {
+			fmt.Println("password/username incorrect")
+		}
+
+	} else if err == sql.ErrNoRows {
+		fmt.Println("password/username incorrect")
+	} else {
+		log.Fatal(err)
+	}
 }
 
 func disableUser(w http.ResponseWriter, r *http.Request) {
