@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha1"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -31,29 +30,22 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("hit createUser")
 }
 
-func userPwLogin(w http.ResponseWriter, r *http.Request) {
-	username := r.Form.Get("username")
+// test if user can login with password
+func LoginPW(user string, pass string) bool {
 	var pwHash, email, salt string
 	db := GetDBHandle()
-	row := db.QueryRow("SELECT email,salt,passwordhash FROM useraccount WHERE username=$1;", username)
+	row := db.QueryRow("SELECT email,salt,passwordhash FROM useraccount WHERE username=$1;", user)
 	err := row.Scan(&email, &salt, &pwHash)
 
 	if err == nil {
 		hasher := sha1.New()
-		hasher.Write([]byte(email + r.Form.Get("password") + salt))
+		hasher.Write([]byte(email + pass + salt))
 		passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 		if passwordHash == pwHash {
-			fmt.Println("login success")
-			GenerateNewCookie(w, "uid", username)
-		} else {
-			fmt.Println("password/username incorrect")
+			return true
 		}
-
-	} else if err == sql.ErrNoRows {
-		fmt.Println("password/username incorrect")
-	} else {
-		log.Fatal(err)
 	}
+	return false
 }
 
 func disableUser(w http.ResponseWriter, r *http.Request) {

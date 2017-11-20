@@ -31,8 +31,6 @@ func Login3rdParty(loginType string) bool {
 	return true
 }
 
-// test if user can login with password
-
 func GenerateNewCookie(w http.ResponseWriter, cookiekey string, cookievalue string) {
 	ct := time.Now()
 	fmt.Println(ct)
