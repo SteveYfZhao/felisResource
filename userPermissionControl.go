@@ -44,7 +44,7 @@ func userPwLogin(w http.ResponseWriter, r *http.Request) {
 		passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 		if passwordHash == pwHash {
 			fmt.Println("login success")
-
+			GenerateNewCookie(w, "uid", username)
 		} else {
 			fmt.Println("password/username incorrect")
 		}

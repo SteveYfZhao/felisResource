@@ -1,25 +1,28 @@
 package main
+
 import (
-	"fmt"
-	"time"
-	"net/http"
-	"io/ioutil"
-	"crypto/rand"
-	"encoding/base64"
-	"math/big"
 	"crypto/aes"
 	"crypto/cipher"
-	"io"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
-	"strings"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math/big"
+	"net/http"
+	"strings"
+	"time"
 )
 
 const keyLength int = 16
+
 var keyInitialized = false
 var currentEncryKey []byte
 var previousEncryKey []byte
 var lastKeyUpdateTime time.Time = time.Time{}
+
 const refreshCycle = 2 * time.Hour
 const separator = " "
 
@@ -29,33 +32,27 @@ func Login3rdParty(loginType string) bool {
 }
 
 // test if user can login with password
-func LoginPW (user string, pass string) bool {
 
-	return true
-}
-
-
-
-func GenerateNewCookie (w http.ResponseWriter, cookiekey string, cookievalue string) {
+func GenerateNewCookie(w http.ResponseWriter, cookiekey string, cookievalue string) {
 	ct := time.Now()
-	fmt.Println(ct)	
-	ck := &http.Cookie {Name: cookiekey, Value:cookievalue}
-	http.SetCookie(w,ck)
+	fmt.Println(ct)
+	ck := &http.Cookie{Name: cookiekey, Value: cookievalue}
+	http.SetCookie(w, ck)
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
-    //cookie := http.Cookie{Name: "username", Value: "astaxie", Expires: expiration}
-    //http.SetCookie(w, &cookie)
+	//cookie := http.Cookie{Name: "username", Value: "astaxie", Expires: expiration}
+	//http.SetCookie(w, &cookie)
 	fmt.Println("Set cookie", cookiekey, cookievalue)
 }
 
-func GetUserCookie (r *http.Request, key string) (string, error) {
+func GetUserCookie(r *http.Request, key string) (string, error) {
 	cookie, err := r.Cookie(key)
-	
+
 	if err != nil {
 		fmt.Println("failed to get cookie", err)
 		return "", err
 	} else {
 		fmt.Println("receive cookie")
-		if (cookie != nil) {
+		if cookie != nil {
 			fmt.Println(cookie.Name)
 			fmt.Println(cookie.Value)
 			return cookie.Value, nil
@@ -63,15 +60,15 @@ func GetUserCookie (r *http.Request, key string) (string, error) {
 		return "", nil
 	}
 	/*
-	fmt.Println("List of all cookies")
-	for _, ce := range r.Cookies() {
-        fmt.Println(ce.Name)
-	}
+			fmt.Println("List of all cookies")
+			for _, ce := range r.Cookies() {
+		        fmt.Println(ce.Name)
+			}
 	*/
-	
+
 }
 
-func GetUserNamefromCookie(r *http.Request)(string, error){
+func GetUserNamefromCookie(r *http.Request) (string, error) {
 	return GetUserCookie(r, "uid")
 }
 
@@ -80,23 +77,24 @@ func GetUserNamefromCookie(r *http.Request)(string, error){
 // number generator fails to function correctly, in which
 // case the caller should not continue.
 func GenerateRandomBytes(n int) ([]byte, error) {
-    b := make([]byte, n)
-    _, err := rand.Read(b)
-    // Note that err == nil only if we read len(b) bytes.
-    if err != nil {
-        return nil, err
-    }
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	// Note that err == nil only if we read len(b) bytes.
+	if err != nil {
+		return nil, err
+	}
 
-    return b, nil
+	return b, nil
 }
 
 // GenerateRandomString returns a URL-safe, base64 encoded
 // securely generated random string.
 func GenerateRandomString(s int) (string, error) {
-    b, err := GenerateRandomBytes(s)
-    return base64.URLEncoding.EncodeToString(b), err
+	b, err := GenerateRandomBytes(s)
+	return base64.URLEncoding.EncodeToString(b), err
 }
-// Try loading the master key for DB from "masterKey.txt"  
+
+// Try loading the master key for DB from "masterKey.txt"
 func loadMasterDBKey() (string, error) {
 	filename := "masterKey.txt"
 	key, err := ioutil.ReadFile(filename)
@@ -108,21 +106,21 @@ func loadMasterDBKey() (string, error) {
 
 func encryptString(value string) string {
 	nBig, err := rand.Int(rand.Reader, big.NewInt(37))
-    if err != nil {
-        panic(err)
+	if err != nil {
+		panic(err)
 	}
 	nBig2, err := rand.Int(rand.Reader, big.NewInt(37))
-    if err != nil {
-        panic(err)
-    }
-    n := int(nBig.Int64())+16
-    n2 := int(nBig2.Int64())+16
+	if err != nil {
+		panic(err)
+	}
+	n := int(nBig.Int64()) + 16
+	n2 := int(nBig2.Int64()) + 16
 	prefix, err := GenerateRandomString(n)
-	if (err != nil){
+	if err != nil {
 		panic(err)
 	}
 	appendix, err := GenerateRandomString(n2)
-	if (err != nil){
+	if err != nil {
 		panic(err)
 	}
 	key, _ := GetEncryptionKeys()
@@ -146,7 +144,7 @@ func encryptString(value string) string {
 	return base64.URLEncoding.EncodeToString(ciphertext)
 }
 
-func decryptString (cryptoText string) (string, error) {
+func decryptString(cryptoText string) (string, error) {
 	currentKey, prevKey := GetEncryptionKeys()
 	rawResult := decryptStringCore(cryptoText, currentKey)
 	trialResult, err := unpackDecryptedString(rawResult)
@@ -158,7 +156,7 @@ func decryptString (cryptoText string) (string, error) {
 	return trialResult, err
 }
 
-func unpackDecryptedString (target string) (string, error) {
+func unpackDecryptedString(target string) (string, error) {
 	startIndex := strings.Index(target, separator)
 	if startIndex == -1 {
 		return "", errors.New("Decrypted String is Invalid")
@@ -167,7 +165,7 @@ func unpackDecryptedString (target string) (string, error) {
 	if endIndex == -1 {
 		return "", errors.New("Decrypted String is Invalid")
 	}
-	content := target[startIndex: endIndex]
+	content := target[startIndex:endIndex]
 	return content, nil
 }
 
@@ -196,20 +194,19 @@ func decryptStringCore(cryptoText string, key []byte) string {
 }
 
 func isJSON(s string) bool {
-    var js map[string]interface{}
-    return json.Unmarshal([]byte(s), &js) == nil
+	var js map[string]interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
 
 }
+
 // cookie = aes (json (rand1 string, username string, rand2 string)) + hmac
 // key for aes = rand3 string // update every 8 hours, last one key is saved.
 // cookies encrypted with the old key gets re-generated when the aes key changes.
 // if cookie is generated two key cycles ago, cookie gets cleared, user needs to re-login
 // research if iv needs random refresh as well.
 
-// to avoid race condition, consider using a slice to store aes keys. cookie functions should 
+// to avoid race condition, consider using a slice to store aes keys. cookie functions should
 // fetch last two values. or use updating flags and sleep to avoid racing condition.
-
-
 
 func GetEncryptionKeys() (currnt []byte, previous []byte) {
 	if !keyInitialized {
@@ -221,7 +218,7 @@ func GetEncryptionKeys() (currnt []byte, previous []byte) {
 
 	if lastKeyUpdateTime.Add(time.Duration(refreshCycle)).Before(time.Now()) {
 		// regen keys
-		
+
 		newKey, err := GenerateRandomBytes(keyLength)
 		if err == nil {
 			previousEncryKey = currentEncryKey
@@ -230,7 +227,7 @@ func GetEncryptionKeys() (currnt []byte, previous []byte) {
 		} else {
 			panic(err)
 		}
-		
+
 	}
 
 	return currentEncryKey, previousEncryKey
