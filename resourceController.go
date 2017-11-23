@@ -97,6 +97,7 @@ func getAllResourceForUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(rvalues))
 	fmt.Println("hit getAllResourceForUser")
 }
+
 func getAllResourceForUserCore(username string) *[]ResourceInfo {
 	userperms := GetAllPermsofUser(username)
 	db := GetDBHandle()
@@ -188,6 +189,23 @@ func BookResource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("hit AddResource")
+}
+
+func cancelBooking(w http.ResponseWriter, r *http.Request) {
+	resourceid := r.Form.Get("resourceid")
+	username := r.Form.Get("username")
+	currentuser, err := GetUserNamefromCookie(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if HasPermission(currentuser, "clientadminperm") || currentuser == username {
+		db := GetDBHandle()
+		db.QueryRow("DELETE FROM resourcebooking WHERE resource = $1 AND bookedforuser = $2;", resourceid, username)
+		fmt.Println("hit deleteBooking")
+	} else {
+		fmt.Println("hit deleteBooking, but no permission")
+	}
+
 }
 
 func ArchivePastBooking() {

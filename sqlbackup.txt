@@ -207,6 +207,13 @@ CREATE TABLE public.resourceavailabletime
     CONSTRAINT resourceavailabletime_pkey PRIMARY KEY (id)
 )
 
+CREATE TABLE public.userfavresource
+(
+    id serial NOT NULL,
+    resource INT references resourcelist(id),
+    username varchar(80) references useraccount(username),
+    CONSTRAINT userfavresource_pkey PRIMARY KEY (id)
+)
 // alternative plan if the rules are getting too complicatied for client to use. 
 // Generate a table containing all days in a year and use the available time table to prepopulate the date table.
 // allow user to adjust individual days after 
