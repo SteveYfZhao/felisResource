@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -127,6 +128,25 @@ func removeRolefromPerm(w http.ResponseWriter, r *http.Request) {
 	rolename := r.Form.Get("rolename")
 	db.QueryRow("DELETE FROM permissionassignment WHERE permissionname = $1 AND rolename =$2);", permissionname, rolename)
 	fmt.Println("hit removeRolefromPerm")
+}
+
+type UserInfo struct {
+	username          string
+	commonPermissions []string
+}
+
+func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
+	cookieUsername, _ := GetUserNamefromCookie(r)
+	userBasicPerms := []string{"canAccess", "basicClient", "basicAdmin"}
+
+	rt := UserInfo{cookieUsername, userBasicPerms}
+	rvalues, err := json.Marshal(rt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(rvalues))
+	fmt.Println("hit UserBasicInfo")
+
 }
 
 func HasRole(username string, rolename string) bool {

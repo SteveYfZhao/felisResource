@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import Calendar from 'rc-calendar';
 import logo from './logo.svg';
 import './App.css';
+import axios from 'axios';
 import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox } from 'semantic-ui-react';
 
 var moment = require('moment');
@@ -21,6 +22,8 @@ const halfhouroptions = [
   { key: '00', text: '00', value: '00' },
   { key: '30', text: '30', value: '30' },
 ]
+const serverPortNum = 8081;
+const serverProtocol = "http";
 
   class App extends Component {
     render() {
@@ -31,6 +34,7 @@ const halfhouroptions = [
             <h1 className="App-title">Felis Resource Management System</h1>
           </header>
           <Button>Login</Button>
+          <LoginCtrls></LoginCtrls>
           <Menu floated='right' pagination>
             <Menu.Item as='a' icon>
               <Icon name='left chevron' />
@@ -50,7 +54,7 @@ const halfhouroptions = [
           <Grid celled>
             <Grid.Row>
               <Grid.Column width={3}>
-                <p>Select date"</p>
+                <p>Select date</p>
                 <Calendar />
                 <div>
                   <Button>Only show rooms available</Button>
@@ -164,6 +168,21 @@ const halfhouroptions = [
         </Table.Body>
         
       </Table>;
+    }
+  }
+
+  class LoginCtrls
+  
+  extends React.Component {
+    render() {
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/user?ID=12345')
+      .then(function (response) {
+        console.log(response);
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+      return <p>loginCtrls</p>;
     }
   }
 
