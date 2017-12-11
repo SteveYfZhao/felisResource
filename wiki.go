@@ -1,30 +1,33 @@
 package main
+
 import (
+	"database/sql"
 	"errors"
-	"html/template"
 	"fmt"
+	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
-	"log"
-	"database/sql"
+
 	_ "github.com/lib/pq"
 )
+
 // copied to dbcontroller
 const (
-	//DB_USER     = "postgres"
-	//DB_PASSWORD = "111111"
-	//DB_NAME     = "test"
+//DB_USER     = "postgres"
+//DB_PASSWORD = "111111"
+//DB_NAME     = "test"
 )
 
 type Page struct {
 	Title string
-	Body []byte
+	Body  []byte
 }
 
 func (p *Page) save() error {
-	filename := p.Title + ".txt"	
+	filename := p.Title + ".txt"
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
@@ -39,50 +42,50 @@ func loadPage(title string) (*Page, error) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	/*
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+		title, err := getTitle(w, r)
+		if err != nil {
+			return
+		}
 	*/
 	p, err := loadPage(title)
-	if err !=nil {
+	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		log.Panic("save error: ", err)
 		return
 	}
-    renderTemplate(w,"view",p)
+	renderTemplate(w, "view", p)
 }
 
-func hobbyHandler(w http.ResponseWriter, r *http.Request){
+func hobbyHandler(w http.ResponseWriter, r *http.Request) {
 	hobby := r.URL.Path[len("/hobby/"):]
 	fmt.Fprintf(w, "Hi there, I love %s!", hobby)
 }
 
-func editHandler(w http.ResponseWriter, r *http.Request, title string){
+func editHandler(w http.ResponseWriter, r *http.Request, title string) {
 	/*
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+		title, err := getTitle(w, r)
+		if err != nil {
+			return
+		}
 	*/
 	p, err := loadPage(title)
-	if (err != nil){
-		p = &Page{Title:title}
+	if err != nil {
+		p = &Page{Title: title}
 		log.Fatal("load error: ", err)
 	}
-	renderTemplate(w,"edit",p)
+	renderTemplate(w, "edit", p)
 
 }
 
-func saveHandler(w http.ResponseWriter, r *http.Request, title string){
+func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	/*
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+		title, err := getTitle(w, r)
+		if err != nil {
+			return
+		}
 	*/
 	body := r.FormValue("body")
-	p := &Page{Title:title, Body:[]byte(body)}
+	p := &Page{Title: title, Body: []byte(body)}
 	err := p.save()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -92,21 +95,21 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string){
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request){
-	
+func defaultHandler(w http.ResponseWriter, r *http.Request) {
+
 	fmt.Fprintf(w, "We are working on this page. Come back later!")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("method:", r.Method)
-	if r.Method == "GET"{
+	if r.Method == "GET" {
 		t, _ := template.ParseFiles("login.html")
 		t.Execute(w, nil)
 	}
 	if r.Method == "POST" {
 		err := r.ParseForm()
 		if err == nil {
-			
+
 			usrName := r.PostForm["username"][0]
 			passWord := r.PostForm["password"][0]
 
@@ -116,10 +119,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 			if LoginPW(usrName, passWord) == true {
 				GenerateNewCookie(w, "uid", usrName)
-
+			} else {
+				fmt.Println("Failed to login, check username/password")
 			}
 		} else {
-			fmt.Println(err)
+			fmt.Println("Failed to parse form", err)
 		}
 	}
 }
@@ -129,13 +133,13 @@ var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	err := templates.ExecuteTemplate(w, tmpl+".html", p)
-	if err!=nil {
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-    //t.Execute(w, p)
+	//t.Execute(w, p)
 }
 
-func getTitle(w http.ResponseWriter, r *http.Request) (string, error){
+func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
 	m := validPath.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
@@ -144,16 +148,16 @@ func getTitle(w http.ResponseWriter, r *http.Request) (string, error){
 	return m[2], nil
 }
 
-func makeHandler(fn func (http.ResponseWriter, *http.Request, string)) http.HandlerFunc{
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
-        if m == nil {
-            http.NotFound(w, r)
-            return
+		if m == nil {
+			http.NotFound(w, r)
+			return
 		}
-		
-		r.ParseForm()  // parse arguments, you have to call this by yourself
-		fmt.Println(r.Form)  // print form information in server side
+
+		r.ParseForm()       // parse arguments, you have to call this by yourself
+		fmt.Println(r.Form) // print form information in server side
 		fmt.Println("path", r.URL.Path)
 		fmt.Println("scheme", r.URL.Scheme)
 		fmt.Println(r.Form["url_long"])
@@ -161,21 +165,20 @@ func makeHandler(fn func (http.ResponseWriter, *http.Request, string)) http.Hand
 			fmt.Println("key:", k)
 			fmt.Println("val:", strings.Join(v, ""))
 		}
-        fn(w, r, m[2])
+		fn(w, r, m[2])
 	}
 }
-
 
 type helloHandler struct{}
 
 func (h helloHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	
-	GenerateNewCookie (w, "testuid","aaa") 
+
+	GenerateNewCookie(w, "testuid", "aaa")
 	GetUserCookie(r, "testuid")
 	fmt.Fprintf(w, "hello, you've hit %s\n", r.URL.Path)
 }
 
-func main(){
+func main() {
 	//p1 := &Page{Title: "TestPage", Body: []byte("This is a sample Page")}
 	//p1.save()
 	//p2, _ := loadPage("TestPage")
@@ -187,18 +190,17 @@ func main(){
 
 	defer db.Close()
 	fmt.Println("# Inserting values")
-	
+
 	var lastInsertId int
 	//db.QueryRow("INSERT INTO userinfo(username,departname,created) VALUES($1,$2,$3) returning uid;", "astaxie", "研发部门", "2012-12-09").Scan(&lastInsertId)
 	fmt.Println("last inserted id =", lastInsertId)
-
 
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
 	//http.HandleFunc("/hobby/", hobbyHandler)
 	http.HandleFunc("/login", login)
-	
+
 	//http.Handle("/tmpfiles/", http.StripPrefix("/tmpfiles/", http.FileServer(http.Dir("/www2"))))
 	http.Handle("/hello/", helloHandler{})
 	//http.Handle("/www/", http.StripPrefix("/www/", http.FileServer(http.Dir("www"))))
@@ -210,6 +212,4 @@ func main(){
 	AddUserPermHandler()
 	http.ListenAndServe(":8081", nil)
 
-
 }
-

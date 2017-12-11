@@ -15,7 +15,8 @@ func GetFunctionName(i interface{}) string {
 func AddUserPermHandler() {
 
 	publicEndPoints := []func(http.ResponseWriter, *http.Request){
-		UserBasicInfo
+		UserBasicInfo,
+		createUserbySignup,
 	}
 	reqClientAdmin := []func(http.ResponseWriter, *http.Request){
 		createUser,
@@ -42,7 +43,6 @@ func AddUserPermHandler() {
 		http.HandleFunc(endPoint, funcName)
 	}
 
-
 	for _, funcName := range reqClientAdmin {
 		tokens := strings.Split(strings.ToLower(GetFunctionName(funcName)), ".")
 		endPoint := "/" + tokens[len(tokens)-1]
@@ -61,8 +61,8 @@ func AddUserPermHandler() {
 
 func makeRestrictiedHandlerbyRole(requireRole string, funcName func(*http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, _ := GetUserNamefromCookie(r)
-		if HasRole(userId, requireRole) {
+		userID, _ := GetUserNamefromCookie(r)
+		if HasRole(userID, requireRole) {
 			funcName(r)
 		} else {
 			http.NotFound(w, r)
@@ -74,8 +74,8 @@ func makeRestrictiedHandlerbyRole(requireRole string, funcName func(*http.Reques
 func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, _ := GetUserNamefromCookie(r)
-		if HasPermission(userId, requirePerm) {
+		userID, _ := GetUserNamefromCookie(r)
+		if HasPermission(userID, requirePerm) {
 			funcName(w, r)
 		} else {
 			http.NotFound(w, r)

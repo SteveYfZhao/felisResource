@@ -3,17 +3,18 @@
     <title></title>
     </head>
     <body>
-        <form action="/login?username=asdfsadf" method="post">
+        <form action="/login" method="post">
             Username:<input type="text" name="username">
             Password:<input type="password" name="password">
             <input type="submit" value="Login">
         </form>
 
         <p>Or sign up a new account</p>
-        <form action="/login?username=asdfsadf" method="post">
+        <form action="/createuserbysignup" method="post">
             Username:<input type="text" name="username">
+            Email:<input type="text" name="email">
             Password:<input type="password" name="password">
-            Repeat Password:<input type="password" name="password">
+            Repeat Password:<input type="password">
             <input type="submit" value="Create account">
         </form>
     </body>

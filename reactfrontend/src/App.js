@@ -175,7 +175,7 @@ const serverProtocol = "http";
   
   extends React.Component {
     render() {
-      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/user?ID=12345')
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/createUser')
       .then(function (response) {
         console.log(response);
       })

@@ -20,11 +20,12 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func createUserbySignup(w http.ResponseWriter, r *http.Request) {
-	username := r.Form.Get("username")
-	email := r.Form.Get("email")
+	username := r.PostForm["username"][0]
+	email := r.PostForm["email"][0]
+
 	salt, _ := GenerateRandomString(128)
 	hasher := sha1.New()
-	hasher.Write([]byte(email + r.Form.Get("password") + salt))
+	hasher.Write([]byte(email + r.PostForm["password"][0] + salt))
 	passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 	db := GetDBHandle()
 	db.QueryRow("INSERT INTO useraccount(username,userid,created,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6) returning id;", username, "", time.Now(), email, salt, passwordHash)
