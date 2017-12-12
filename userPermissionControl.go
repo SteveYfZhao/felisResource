@@ -20,16 +20,25 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func createUserbySignup(w http.ResponseWriter, r *http.Request) {
-	username := r.PostForm["username"][0]
-	email := r.PostForm["email"][0]
-
-	salt, _ := GenerateRandomString(128)
-	hasher := sha1.New()
-	hasher.Write([]byte(email + r.PostForm["password"][0] + salt))
-	passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-	db := GetDBHandle()
-	db.QueryRow("INSERT INTO useraccount(username,userid,created,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6) returning id;", username, "", time.Now(), email, salt, passwordHash)
 	fmt.Println("hit createUser")
+	err := r.ParseForm()
+	if err == nil {
+		username := r.PostForm["username"][0]
+		email := r.PostForm["email"][0]
+		password := r.PostForm["password"][0]
+
+		fmt.Println("username:", username)
+		fmt.Println("email:", email)
+		fmt.Println("password:", password)
+
+		salt, _ := GenerateRandomString(128)
+		hasher := sha1.New()
+		hasher.Write([]byte(email + password + salt))
+		passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+		db := GetDBHandle()
+		db.QueryRow("INSERT INTO useraccount(username,userid,created,createdby,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6,$7) returning id;", username, "", time.Now(), "self-registered", email, salt, passwordHash)
+		fmt.Println("complete createUser")
+	}
 }
 
 // test if user can login with password
@@ -132,8 +141,8 @@ func removeRolefromPerm(w http.ResponseWriter, r *http.Request) {
 }
 
 type UserInfo struct {
-	username          string
-	commonPermissions []string
+	Username          string
+	CommonPermissions []string
 }
 
 func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
@@ -145,6 +154,8 @@ func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("rt = ", rt)
+	fmt.Println("rvalues = ", rvalues)
 	fmt.Fprintf(w, string(rvalues))
 	fmt.Println("hit UserBasicInfo")
 
