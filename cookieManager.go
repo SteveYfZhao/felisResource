@@ -42,6 +42,35 @@ func GenerateNewCookie(w http.ResponseWriter, cookiekey string, cookievalue stri
 	fmt.Println("Set cookie", cookiekey, cookievalue)
 }
 
+func EncodeUserDataToCipherCookie(w http.ResponseWriter, uData map[string]string) {
+	plainJsonString := json.Marshal(uData)
+	cipherString := encryptString(plainJsonString)
+	ct := time.Now()
+	fmt.Println(ct)
+	ck := &http.Cookie{Name: "data", Value: cipherString}
+	http.SetCookie(w, ck)
+	//expiration := time.Now().Add(365 * 24 * time.Hour)
+	//cookie := http.Cookie{Name: "username", Value: "astaxie", Expires: expiration}
+	//http.SetCookie(w, &cookie)
+	fmt.Println("Set encrypted cookie", "data", cipherString)
+}
+
+func DecodeCipherCookieToUserData(r *http.Request) map[string]string {
+	cipherString, err := GetUserCookie(r, "data")
+	if err != nil {
+		fmt.Println("failed to get cookie", err)
+		return nil
+	}
+	uData := make(map[string]string)
+	plainJsonString, err := decryptString(cipherString)
+	err = json.Unmarshal([]byte(plainJsonString), &uData)
+	if err != nil {
+		fmt.Println("failed to get cookie", err)
+		return nil
+	}
+	return uData
+}
+
 func GetUserCookie(r *http.Request, key string) (string, error) {
 	cookie, err := r.Cookie(key)
 
@@ -63,7 +92,6 @@ func GetUserCookie(r *http.Request, key string) (string, error) {
 		        fmt.Println(ce.Name)
 			}
 	*/
-
 }
 
 func GetUserNamefromCookie(r *http.Request) (string, error) {

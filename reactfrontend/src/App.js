@@ -171,18 +171,24 @@ const serverProtocol = "http";
     }
   }
 
-  class LoginCtrls
-  
-  extends React.Component {
+  class LoginCtrls extends React.Component {
     render() {
+      var resp = null;
       axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/createUser')
       .then(function (response) {
         console.log(response);
+        resp = response;
       })
       .catch(function (error) {
         console.log(error);
       });
-      return <p>loginCtrls</p>;
+
+      if (resp && resp.cookieUsername) {
+        return <p>logged user, control panel entry</p>
+      } else {
+        return <p><a href="/login">login here</a></p>
+      }
+
     }
   }
 

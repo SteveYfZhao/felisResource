@@ -30,14 +30,27 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("username:", username)
 		fmt.Println("email:", email)
 		fmt.Println("password:", password)
-
-		salt, _ := GenerateRandomString(128)
-		hasher := sha1.New()
-		hasher.Write([]byte(email + password + salt))
-		passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+		// test if userid or email exists
+		exists := false
+		//username := r.Form.Get("username")
+		//rolename := r.Form.Get("rolename")
 		db := GetDBHandle()
-		db.QueryRow("INSERT INTO useraccount(username,userid,created,createdby,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6,$7) returning id;", username, "", time.Now(), "self-registered", email, salt, passwordHash)
-		fmt.Println("complete createUser")
+		err := db.QueryRow("SELECT exists (SELECT username FROM useraccount WHERE username=$1 OR email=$2)", username, email).Scan(&exists)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if !exists {
+			salt, _ := GenerateRandomString(128)
+			hasher := sha1.New()
+			hasher.Write([]byte(email + password + salt))
+			passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+
+			db.QueryRow("INSERT INTO useraccount(username,userid,created,createdby,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6,$7) returning id;", username, "", time.Now(), "self-registered", email, salt, passwordHash)
+			fmt.Println("complete createUser")
+		} else {
+			fmt.Println("user/email exists. Cannot createUser")
+		}
+
 	}
 }
 
