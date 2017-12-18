@@ -16,9 +16,10 @@ import (
 
 // copied to dbcontroller
 const (
-//DB_USER     = "postgres"
-//DB_PASSWORD = "111111"
-//DB_NAME     = "test"
+	//DB_USER     = "postgres"
+	//DB_PASSWORD = "111111"
+	//DB_NAME     = "test"
+	ServerPort = "8081"
 )
 
 type Page struct {
@@ -118,7 +119,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 			// TODO: implement login func
 
 			if LoginPW(usrName, passWord) == true {
-				GenerateNewCookie(w, "uid", usrName)
+				//GenerateNewCookie(w, "uid", usrName)
+				uData := make(map[string]string)
+				uData["uid"] = usrName
+				EncodeUserDataToCipherCookie(w, uData)
 			} else {
 				fmt.Println("Failed to login, check username/password")
 			}
@@ -210,6 +214,6 @@ func main() {
 	//InitDBTablewithValue()
 
 	AddUserPermHandler()
-	http.ListenAndServe(":8081", nil)
+	http.ListenAndServe(":"+ServerPort, nil)
 
 }

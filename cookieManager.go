@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net/http"
 	"strings"
@@ -43,8 +44,11 @@ func GenerateNewCookie(w http.ResponseWriter, cookiekey string, cookievalue stri
 }
 
 func EncodeUserDataToCipherCookie(w http.ResponseWriter, uData map[string]string) {
-	plainJsonString := json.Marshal(uData)
-	cipherString := encryptString(plainJsonString)
+	plainJsonString, err := json.Marshal(uData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cipherString := encryptString(string(plainJsonString))
 	ct := time.Now()
 	fmt.Println(ct)
 	ck := &http.Cookie{Name: "data", Value: cipherString}
@@ -55,20 +59,20 @@ func EncodeUserDataToCipherCookie(w http.ResponseWriter, uData map[string]string
 	fmt.Println("Set encrypted cookie", "data", cipherString)
 }
 
-func DecodeCipherCookieToUserData(r *http.Request) map[string]string {
+func DecodeCipherCookieToUserData(r *http.Request) (map[string]string, error) {
 	cipherString, err := GetUserCookie(r, "data")
 	if err != nil {
 		fmt.Println("failed to get cookie", err)
-		return nil
+		return nil, err
 	}
 	uData := make(map[string]string)
 	plainJsonString, err := decryptString(cipherString)
 	err = json.Unmarshal([]byte(plainJsonString), &uData)
 	if err != nil {
 		fmt.Println("failed to get cookie", err)
-		return nil
+		return nil, err
 	}
-	return uData
+	return uData, nil
 }
 
 func GetUserCookie(r *http.Request, key string) (string, error) {
@@ -95,7 +99,9 @@ func GetUserCookie(r *http.Request, key string) (string, error) {
 }
 
 func GetUserNamefromCookie(r *http.Request) (string, error) {
-	return GetUserCookie(r, "uid")
+	//return GetUserCookie(r, "uid")
+	uData, err := DecodeCipherCookieToUserData(r)
+	return uData["uid"], err
 }
 
 // GenerateRandomBytes returns securely generated random bytes.

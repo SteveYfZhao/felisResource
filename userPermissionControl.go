@@ -159,6 +159,7 @@ type UserInfo struct {
 }
 
 func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
+
 	cookieUsername, _ := GetUserNamefromCookie(r)
 	userBasicPerms := []string{"canAccess", "basicClient", "basicAdmin"}
 
@@ -171,7 +172,6 @@ func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("rvalues = ", rvalues)
 	fmt.Fprintf(w, string(rvalues))
 	fmt.Println("hit UserBasicInfo")
-
 }
 
 func HasRole(username string, rolename string) bool {

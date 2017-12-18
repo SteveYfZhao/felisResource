@@ -23,6 +23,7 @@ const halfhouroptions = [
   { key: '30', text: '30', value: '30' },
 ]
 const serverPortNum = 8081;
+
 const serverProtocol = "http";
 
   class App extends Component {
@@ -120,7 +121,7 @@ const serverProtocol = "http";
           if (cellData == null || cellData.SpanOverride){
             continue;
           } else {
-            console.log("push cell", cells);
+            //console.log("push cell", cells);
             cells.push(<Table.Cell rowSpan = {cellData.rowSpan} selectable = {cellData.selectable}>{cellData.value}</Table.Cell>);
             
           }          
@@ -156,7 +157,7 @@ const serverProtocol = "http";
           var cellData = {rowSpan:1, selectable:true, SpanOverride:false, value:""};          
           row.push(cellData);
         }
-        console.log("datarow", row);
+        //console.log("datarow", row);
         rMatrixJSX.push(<TRowSlot id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
         //rMatrixJSX.push(<Table.Row><Table.Cell rowSpan = '1' selectable = 'true'></Table.Cell></Table.Row>);
         
@@ -172,18 +173,38 @@ const serverProtocol = "http";
   }
 
   class LoginCtrls extends React.Component {
-    render() {
+    constructor(props) {
+      super(props);
+      this.state = {resp: null};
+    }
+
+    componentDidMount() {
       var resp = null;
-      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/createUser')
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/userbasicinfo', {withCredentials: true})
       .then(function (response) {
         console.log(response);
+        self.setState({
+          resp: response.data
+        });
+        console.log("this.state.resp", self.state.resp);
         resp = response;
+
       })
       .catch(function (error) {
         console.log(error);
       });
+      
+    }
+      
+    componentWillUnmount() {
+      
+    }
 
-      if (resp && resp.cookieUsername) {
+    render() {
+     
+      //console.log("resp.Username", resp.Username);
+      if (this.state.resp && this.state.resp.Username) {
         return <p>logged user, control panel entry</p>
       } else {
         return <p><a href="/login">login here</a></p>

@@ -40,7 +40,7 @@ func AddUserPermHandler() {
 		tokens := strings.Split(strings.ToLower(GetFunctionName(funcName)), ".")
 		endPoint := "/" + tokens[len(tokens)-1]
 		fmt.Println("endPoint:", endPoint)
-		http.HandleFunc(endPoint, funcName)
+		http.HandleFunc(endPoint, makePublicHandler(funcName))
 	}
 
 	for _, funcName := range reqClientAdmin {
@@ -59,11 +59,21 @@ func AddUserPermHandler() {
 	}
 }
 
-func makeRestrictiedHandlerbyRole(requireRole string, funcName func(*http.Request)) func(http.ResponseWriter, *http.Request) {
+func makePublicHandler(funcName func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// preprocess w and r
+		w, r = preprocessRequestAndReponse(w, r)
+		funcName(w, r)
+
+	}
+}
+
+func makeRestrictiedHandlerbyRole(requireRole string, funcName func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := GetUserNamefromCookie(r)
 		if HasRole(userID, requireRole) {
-			funcName(r)
+			w, r = preprocessRequestAndReponse(w, r)
+			funcName(w, r)
 		} else {
 			http.NotFound(w, r)
 			return
@@ -76,10 +86,18 @@ func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.Respons
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := GetUserNamefromCookie(r)
 		if HasPermission(userID, requirePerm) {
+			w, r = preprocessRequestAndReponse(w, r)
 			funcName(w, r)
 		} else {
 			http.NotFound(w, r)
 			return
 		}
 	}
+}
+
+func preprocessRequestAndReponse(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	return w, r
 }
