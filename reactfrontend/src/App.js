@@ -5,7 +5,8 @@ import Calendar from 'rc-calendar';
 import logo from './logo.svg';
 import './App.css';
 import axios from 'axios';
-import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox } from 'semantic-ui-react';
+import { BrowserRouter, Link, Route } from 'react-router-dom'
+import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image } from 'semantic-ui-react';
 
 var moment = require('moment');
 const hourInput = () => (
@@ -31,10 +32,23 @@ const serverProtocol = "http";
       return (
         <div className="App">
           <header className="App-header">
-            <img src={logo} className="App-logo" alt="logo" />
-            <h1 className="App-title">Felis Resource Management System</h1>
+            {/*<img src={logo} className="App-logo" alt="logo" />*/}
+            <h1 className="App-title"><a href="/">Felis Resource Management System</a></h1>
           </header>
-          <Button>Login</Button>
+          <Route exact path="/" component={MainView}/>
+          <Route path="/index" component={MainView}/> 
+          <Route path="/adminview" component={AdminView}/>     
+        </div>
+      );
+    }
+  }
+
+  class MainView extends React.Component {
+    render() {
+      return (
+        <div className="MainView">
+          
+          
           <LoginCtrls></LoginCtrls>
           <Menu floated='right' pagination>
             <Menu.Item as='a' icon>
@@ -80,6 +94,7 @@ const serverProtocol = "http";
         </div>
       );
     }
+
   }
   class TCell extends React.Component {
     render() {
@@ -205,12 +220,184 @@ const serverProtocol = "http";
      
       //console.log("resp.Username", resp.Username);
       if (this.state.resp && this.state.resp.Username) {
-        return <p>logged user, control panel entry</p>
+        return (
+          <div>
+            <p>Hello, {this.state.resp.Username}</p>
+            <CtrlPanel isAdmin = {this.state.resp.CommonPermissions.indexOf("basicAdmin") > -1} />
+          </div>
+        );
+
       } else {
-        return <p><a href="/login">login here</a></p>
+        return (
+          <p>
+            <Button>Login</Button>
+            <a href="/login">login here</a>
+          </p>
+        );
       }
 
     }
   }
+
+  class CtrlPanel extends React.Component {
+    render() {
+      if (this.props.isAdmin) {
+        return (
+          <div>
+          <nav>
+            {/*<Link to="/dashboard">Admin Control Panel</Link>*/}
+            <Link to="/adminview">Admin Control Panel</Link>
+          </nav>
+          <div>
+            <Route path="/adminview" component={AdminView}/>
+          </div>
+        </div>
+          
+        );
+      } else {
+        return <a>User Settings</a>
+      }
+    }
+  }
+
+  class AdminView extends React.Component {
+    render() {
+      
+        return (
+          <div className="AdminView">
+            <SidebarLeftSlideAlong/>
+
+
+
+            {/*<Grid celled>
+              <Grid.Row>
+                <Grid.Column width={3}>
+                  <div className = "sidebar">
+                    <p>Sidebar</p>
+            
+                  </div>
+                </Grid.Column>
+                <Grid.Column width={13}>
+                  <div className = "mainbody">
+                    <h2>AdminView</h2>
+                  </div>              
+                </Grid.Column>
+              </Grid.Row>
+
+            </Grid>*/}
+          </div>
+          )
+      
+    }
+  }
+
+  class SidebarLeftSlideAlong extends Component {
+    constructor(props) {
+      super(props);  
+      this.state = { 
+        visible: true,
+        activeItem: null
+      };
+    }
+
+    handleItemClick = name => this.setState({ activeItem: name })
+    toggleVisibility = () => this.setState({ visible: !this.state.visible })
+  
+    render() {
+      const { activeItem } = this.state || {}
+      const { visible } = this.state
+      return (
+        <div>
+          
+          <Sidebar.Pushable as={Segment}>
+            <Sidebar as={Menu} animation='slide along' width='thin' visible={visible} icon='labeled' vertical inverted>
+
+            {/*
+            <Menu.Header name='rooms'>
+              <Icon name='browser' />
+              Manage Rooms
+            </Menu.Header>
+            <Menu.Menu>
+              <Menu.Item name='Add room' active={activeItem === 'enterprise'} onClick={this.handleItemClick} />
+              <Menu.Item name='consumer' active={activeItem === 'consumer'} onClick={this.handleItemClick} />
+            </Menu.Menu>
+            */}  
+
+
+              <Menu.Item name='rooms' active={activeItem === 'rooms'} onClick={this.handleItemClick} href="/adminview/rooms">
+                <Link to="/adminview/rooms"><Icon name='browser' /> Manage Rooms</Link>
+              </Menu.Item>
+              <Menu.Item name='users' active={activeItem === 'users'} onClick={this.handleItemClick}>
+                <Link to="/adminview/users">
+                <Icon name='users' />
+                Manage Users
+                </Link>
+              </Menu.Item>
+              <Menu.Item name='stats' active={activeItem === 'stats'} onClick={this.handleItemClick}>
+                <Link to="/adminview/stats">
+                <Icon name='bar chart' />
+                Stats
+                </Link>
+              </Menu.Item>
+            </Sidebar>
+            <Sidebar.Pusher>
+              <Segment basic>
+              <Header as='h3'><Button onClick={this.toggleVisibility}>Menu</Button> Application Content</Header>
+              <Route path={'/adminview/rooms'}component={ManageRooms}/>
+              <Route path={'/adminview/users'}component={ManageUsers}/>
+              <Route path={'/adminview/stats'}component={ShowStats}/>
+                
+                
+                <br/><br/><br/><br/><br/><br/><br/>
+                <Image src='/assets/images/wireframe/paragraph.png' />
+                <br/><br/><br/><br/><br/><br/><br/>
+                
+              </Segment>
+            </Sidebar.Pusher>
+          </Sidebar.Pushable>
+        </div>
+      )
+    }
+  }
+
+  class ManageRooms extends React.Component {
+    render() {
+      
+        return (
+          <div className="ManageRooms">
+            <p>Manage rooms</p>
+
+          </div>
+          )
+      
+    }
+  }
+
+  class ManageUsers extends React.Component {
+    render() {
+      
+        return (
+          <div className="ManageUsers">
+            <p>ManageUsers</p>
+
+          </div>
+          )
+      
+    }
+  }
+
+  class ShowStats extends React.Component {
+    render() {
+      
+        return (
+          <div className="ShowStats">
+            <p>ShowStats</p>
+
+          </div>
+          )
+      
+    }
+  }
+
 
   export default App;
