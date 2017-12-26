@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-func GetResourceTypeCL(w http.ResponseWriter, r *http.Request) {
+func GetResourceType(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	resId := r.Form.Get("resId")
 	i, err := strconv.Atoi(resId)
 	if err != nil {
 		fmt.Fprintf(w, "invalid parameter")
 	}
 	restype := GetResourceTypeCore(i)
-	fmt.Fprintf(w, restype)
+	return restype, err
 }
 
 func GetResourceTypeCore(resId int) string {
@@ -48,7 +48,7 @@ func GetResourceTags(resId int) *map[string]string {
 	return &result
 }
 
-func AddAvailTimePlan(w http.ResponseWriter, r *http.Request) {
+func AddAvailTimePlan(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	resID := r.Form.Get("resid")
 	resType := r.Form.Get("restype")
 	rulestartdate := r.Form.Get("rulestartdate")
@@ -70,6 +70,7 @@ func AddAvailTimePlan(w http.ResponseWriter, r *http.Request) {
 		resID, resType, rulestartdate, ruleenddate, availstarttime, availendtime, endonnextday, freq, bywkday, bydate, userperm, currentuser, time.Now())
 
 	fmt.Println("hit AddAvailTimePlan")
+	return nil, err
 }
 
 type ResourceInfo struct {
@@ -208,8 +209,37 @@ func cancelBooking(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func ArchivePastBooking() {
+func ArchivePastBooking(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
+	return "OK", nil
+}
+
+func CreateNewresourceType(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	typename := r.Form.Get("typename")
+	//displayname := r.Form.Get("displayname")
+	displayname := ""
+	viewpermission := r.Form.Get("viewpermission")
+	bookpermission := r.Form.Get("bookpermission")
+	db := GetDBHandle()
+	currentuser, err := GetUserNamefromCookie(r)
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+	db.QueryRow("INSERT INTO resourcetypes(resourcetype, displayname, viewpermission, bookpermission, created,createdby) VALUES($1,$2,$3,$4,$5,$6) returning id;", typename, displayname, viewpermission, bookpermission, time.Now(), currentuser)
+	fmt.Println("hit createNewRole")
+	return "OK", err
+}
+
+// For Admin to create resources
+func IsResourceTypeNameAvail(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	typename := r.Form.Get("typename")
+	exists := false
+	db := GetDBHandle()
+	err := db.QueryRow("SELECT exists (SELECT resourcetype FROM resourcetypes WHERE resourcetype=$1)", typename).Scan(&exists)
+
+	return exists, err
 }
 
 func getResourceOccupiedSlot(resIds []string, dt time.Time) *[]BookingInfo {

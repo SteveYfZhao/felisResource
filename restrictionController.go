@@ -9,20 +9,22 @@ import (
 	"time"
 )
 
-func CreateRestrcitionType(w http.ResponseWriter, r *http.Request) {
+func CreateRestrcitionType(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	typename := r.Form.Get("typename")
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db := GetDBHandle()
 	db.QueryRow("INSERT INTO restrictiontypes(type,createdby,created) VALUES($1,$2,$3);", typename, currentuser, time.Now())
 
 	fmt.Println("hit createGlobalRestrcition")
-
+	return "OK", err
 }
 
-func CreateRestrcition(w http.ResponseWriter, r *http.Request) {
+func CreateRestrcition(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	restrictionid := r.Form.Get("restrictionid")
 	restrictiontype := r.Form.Get("restrictiontype")
 	restrictionvalue := r.Form.Get("restrictionvalue")
@@ -32,18 +34,20 @@ func CreateRestrcition(w http.ResponseWriter, r *http.Request) {
 	restagvalue := r.Form.Get("restagvalue")
 	userperm := r.Form.Get("userperm")
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db := GetDBHandle()
 	db.QueryRow("INSERT INTO restrictions(restrictionid,restrictiontype,restrictionvalue,resourcetype,resource,restag,restagvalue,userperm,createdby,created) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);",
 		restrictionid, restrictiontype, restrictionvalue, resourcetype, resource, restag, restagvalue, userperm, currentuser, time.Now())
 
 	fmt.Println("hit CreateRestrcition")
-
+	return "OK", err
 }
 
-func UpdateRestrcition(w http.ResponseWriter, r *http.Request) {
+func UpdateRestrcition(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	restrictionid := r.Form.Get("restrictionid")
 	restrictiontype := r.Form.Get("restrictiontype")
 	restrictionvalue := r.Form.Get("restrictionvalue")
@@ -58,31 +62,36 @@ func UpdateRestrcition(w http.ResponseWriter, r *http.Request) {
 		restrictionid, restrictiontype, restrictionvalue, resourcetype, resource, restag, restagvalue, userperm, id)
 
 	fmt.Println("hit CreateRestrcition")
+	return "OK", nil
 }
 
-func RemoveRestrcition(w http.ResponseWriter, r *http.Request) {
+func RemoveRestrcition(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.Form.Get("id")
 	db := GetDBHandle()
 	db.QueryRow("DELETE FROM restrictions WHERE id = $1);", id)
 	fmt.Println("hit RemoveRestriction")
+	return "OK", nil
 }
 
-func GetRestrictionValuesCL(w http.ResponseWriter, r *http.Request) {
+func GetRestrictionValuesCL(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	resourcetype := r.Form.Get("resourcetype")
 	resource := r.Form.Get("resource")
 	//restag := r.Form.Get("restag")
 	//restagvalue := r.Form.Get("restagvalue")
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+
 	userperm := GetAllPermsofUser(currentuser)
 	rvalues, err := json.Marshal(GetRestrictionValuesCoreLite(resourcetype, resource, "", userperm))
 
 	fmt.Fprintf(w, string(rvalues))
 	fmt.Println("hit GetRestrictionValuesCL")
-
+	return "OK", err
 }
 
 func GetRestrictionValuesCoreLite(resourcetype, resource, restrictiontype string, userperm []string) []string {
@@ -93,6 +102,7 @@ func GetRestrictionValuesCoreLite(resourcetype, resource, restrictiontype string
 		(resource = $2 OR resource = '') AND 
 		(userperm = "" OR userperm IN $3)
 		`, resourcetype, resource, userperm)
+
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -19,7 +20,9 @@ const (
 	//DB_USER     = "postgres"
 	//DB_PASSWORD = "111111"
 	//DB_NAME     = "test"
-	ServerPort = "8081"
+	ServerPort   = "8081"
+	FrontEndPort = "3000"
+	IsDEV        = true
 )
 
 type Page struct {
@@ -123,6 +126,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 				uData := make(map[string]string)
 				uData["uid"] = usrName
 				EncodeUserDataToCipherCookie(w, uData)
+				scheme, hostname := GetRootURL(r)
+
+				fmt.Println("r.URL")
+				fmt.Println(r.URL.String())
+				fmt.Println("r.host")
+				fmt.Println(r.Host)
+				fmt.Println("r.URL.Hostname")
+				fmt.Println(r.URL.Hostname())
+				redirectURL := scheme + "://" + hostname + ":" + FrontEndPort + "/"
+				http.Redirect(w, r, redirectURL, http.StatusFound)
 			} else {
 				fmt.Println("Failed to login, check username/password")
 			}
@@ -130,6 +143,25 @@ func login(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Failed to parse form", err)
 		}
 	}
+}
+
+func GetRootURL(r *http.Request) (string, string) {
+	hostname := r.URL.Hostname()
+	scheme := r.URL.Scheme
+
+	if len(strings.TrimSpace(scheme)) == 0 {
+		scheme = "http"
+	}
+
+	if len(strings.TrimSpace(hostname)) == 0 {
+		pURL, err := url.Parse(scheme + "://" + r.Host)
+		if err != nil {
+			log.Fatal("url error: ", err)
+			return "", ""
+		}
+		hostname = pURL.Hostname()
+	}
+	return scheme, hostname
 }
 
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))

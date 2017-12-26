@@ -3,23 +3,25 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
 //TODO: Add remove and edit logic for everything
 
-func createUser(w http.ResponseWriter, r *http.Request) {
+func createUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
 	db.QueryRow("INSERT INTO useraccount(username,userid,created) VALUES($1,$2,$3) returning id;", username, "", time.Now())
 	fmt.Println("hit createUser")
+	return "OK", nil
 }
 
-func createUserbySignup(w http.ResponseWriter, r *http.Request) {
+func createUserbySignup(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	fmt.Println("hit createUser")
 	err := r.ParseForm()
 	if err == nil {
@@ -47,11 +49,25 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) {
 
 			db.QueryRow("INSERT INTO useraccount(username,userid,created,createdby,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6,$7) returning id;", username, "", time.Now(), "self-registered", email, salt, passwordHash)
 			fmt.Println("complete createUser")
+			scheme, hostname := GetRootURL(r)
+			/*
+
+				fmt.Println("r.URL")
+				fmt.Println(r.URL.String())
+				fmt.Println("r.host")
+				fmt.Println(r.Host)
+				fmt.Println("r.URL.Hostname")
+				fmt.Println(r.URL.Hostname())
+			*/
+			redirectURL := scheme + "://" + hostname + ":" + FrontEndPort + "/login"
+			http.Redirect(w, r, redirectURL, http.StatusFound)
+			return "OK", nil
 		} else {
 			fmt.Println("user/email exists. Cannot createUser")
+			return "OK", errors.New("user/email exists. Cannot createUser")
 		}
-
 	}
+	return nil, err
 }
 
 // test if user can login with password
@@ -72,85 +88,120 @@ func LoginPW(user string, pass string) bool {
 	return false
 }
 
-func disableUser(w http.ResponseWriter, r *http.Request) {
+func disableUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
 	db.QueryRow("UPDATE useraccount SET disabled = 1 WHERE username=$1;", username)
 	fmt.Println("hit disableUser")
+	return "OK", nil
 }
 
-func enableUser(w http.ResponseWriter, r *http.Request) {
+func enableUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
 	db.QueryRow("UPDATE useraccount SET disabled = 0 WHERE username=$1;", username)
 	fmt.Println("hit enableUser")
+	return "OK", nil
 }
 
-func removeUser(w http.ResponseWriter, r *http.Request) {
+func removeUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	//username := r.Form.Get("username")
 	fmt.Println("hit removeUser")
+	return "OK", nil
 }
 
-func createNewRole(w http.ResponseWriter, r *http.Request) {
+func createNewRole(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	rolename := r.Form.Get("rolename")
 	db := GetDBHandle()
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db.QueryRow("INSERT INTO rolelist(rolename,created,createdby) VALUES($1,$2,$3) returning id;", rolename, time.Now(), currentuser)
 	fmt.Println("hit createNewRole")
+	return "OK", err
 }
 
-func assignRoletoUser(w http.ResponseWriter, r *http.Request) {
+func assignRoletoUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	db := GetDBHandle()
 	username := r.Form.Get("username")
 	rolename := r.Form.Get("rolename")
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", username, rolename, time.Now(), currentuser)
 	fmt.Println("hit assignRoletoUser")
+	return "OK", err
 }
 
-func createNewPerm(w http.ResponseWriter, r *http.Request) {
+func createNewPerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	permissionname := r.Form.Get("permissionname")
 	db := GetDBHandle()
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db.QueryRow("INSERT INTO permissionlist(permissionname,created,createdby) VALUES($1,$2,$3) returning id;", permissionname, time.Now(), currentuser)
 	fmt.Println("hit createNewRole")
+	return "OK", err
 }
 
-func assignRoletoPerm(w http.ResponseWriter, r *http.Request) {
+func deletePerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	permissionname := r.Form.Get("permissionname")
+	if len(strings.TrimSpace(permissionname)) != 0 {
+		db := GetDBHandle()
+		db.QueryRow("DELETE FROM permissionlist WHERE permissionname = $1;", permissionname)
+		clearAssignmentForPermCore(permissionname)
+		fmt.Println("hit deletePerm")
+		return "OK", nil
+	}
+	return nil, errors.New("permission name is empty")
+}
+
+func clearAssignmentForPermCore(permissionname string) {
+
+	db := GetDBHandle()
+	db.QueryRow("DELETE FROM permissionassignment WHERE permissionname = $1;", permissionname)
+}
+
+func assignRoletoPerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	db := GetDBHandle()
 	permissionname := r.Form.Get("permissionname")
 	rolename := r.Form.Get("rolename")
 	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 	db.QueryRow("INSERT INTO permissionassignment(permissionname,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", permissionname, rolename, time.Now(), currentuser)
 	fmt.Println("hit assignRoletoUser")
+	return "OK", err
 }
 
-func removeRolefromUser(w http.ResponseWriter, r *http.Request) {
+func removeRolefromUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	db := GetDBHandle()
 	username := r.Form.Get("username")
 	rolename := r.Form.Get("rolename")
 	db.QueryRow("DELETE FROM roleassignment WHERE username = $1 AND rolename =$2);", username, rolename)
 	fmt.Println("hit removeRolefromUser")
+	return "OK", nil
 }
 
-func removeRolefromPerm(w http.ResponseWriter, r *http.Request) {
+func removeRolefromPerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	db := GetDBHandle()
 	permissionname := r.Form.Get("permissionname")
 	rolename := r.Form.Get("rolename")
 	db.QueryRow("DELETE FROM permissionassignment WHERE permissionname = $1 AND rolename =$2);", permissionname, rolename)
 	fmt.Println("hit removeRolefromPerm")
+	return "OK", nil
 }
 
 type UserInfo struct {
@@ -158,20 +209,25 @@ type UserInfo struct {
 	CommonPermissions []string
 }
 
-func UserBasicInfo(w http.ResponseWriter, r *http.Request) {
+func UserBasicInfo(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	cookieUsername, _ := GetUserNamefromCookie(r)
 	userBasicPerms := []string{"canAccess", "basicClient", "basicAdmin"}
 
 	rt := UserInfo{cookieUsername, userBasicPerms}
-	rvalues, err := json.Marshal(rt)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("rt = ", rt)
-	fmt.Println("rvalues = ", rvalues)
-	fmt.Fprintf(w, string(rvalues))
+
+	/*
+		rvalues, err := json.Marshal(rt)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		fmt.Println("rt = ", rt)
+		fmt.Println("rvalues = ", rvalues)
+		fmt.Fprintf(w, string(rvalues))
+	*/
 	fmt.Println("hit UserBasicInfo")
+	return rt, nil
 }
 
 func HasRole(username string, rolename string) bool {
@@ -245,20 +301,6 @@ func GetAllPermsofUser(username string) []string {
 		perms = append(perms, roleperms...)
 	}
 	return perms
-}
-
-func createNewresourceType(w http.ResponseWriter, r *http.Request) {
-	typename := r.Form.Get("typename")
-	displayname := r.Form.Get("displayname")
-	viewpermission := r.Form.Get("viewpermission")
-	bookpermission := r.Form.Get("bookpermission")
-	db := GetDBHandle()
-	currentuser, err := GetUserNamefromCookie(r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	db.QueryRow("INSERT INTO resourcetypes(resourcetype, displayname, viewpermission, bookpermission, created,createdby) VALUES($1,$2,$3,$4,$5,$6) returning id;", typename, displayname, viewpermission, bookpermission, time.Now(), currentuser)
-	fmt.Println("hit createNewRole")
 }
 
 func InitDBTablewithValue() {

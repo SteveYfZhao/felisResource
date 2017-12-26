@@ -6,7 +6,7 @@ import logo from './logo.svg';
 import './App.css';
 import axios from 'axios';
 import { BrowserRouter, Link, Route } from 'react-router-dom'
-import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image } from 'semantic-ui-react';
+import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image, Form } from 'semantic-ui-react';
 
 var moment = require('moment');
 const hourInput = () => (
@@ -38,6 +38,8 @@ const serverProtocol = "http";
           <Route exact path="/" component={MainView}/>
           <Route path="/index" component={MainView}/> 
           <Route path="/adminview" component={AdminView}/>     
+          <Route path="/login" component={LoginView}/>     
+          <Route path="/signup" component={SignupView}/>     
         </div>
       );
     }
@@ -74,11 +76,11 @@ const serverProtocol = "http";
                 <div>
                   <Button>Only show rooms available</Button>
                   <p>for at least <input placeholder='1' size = '2'/> hour</p>
-                  <p>from <Input type='text' size='mini' placeholder='12' action>
+                  <div>from <Input type='text' size='mini' placeholder='12' action>
                   <input size = '2'/>
                   <Select compact options={halfhouroptions} defaultValue='00' />
                   <Select compact options={apoptions} defaultValue='PM' />
-                </Input></p>
+                </Input></div>
 
                   <Divider horizontal>Or</Divider>
                   <Button>Show all</Button>
@@ -126,10 +128,14 @@ const serverProtocol = "http";
       //this.props: rlist(array), colPerPage(int), pageNum(int)
       var cells = [];
       var rlist = this.props.rlist;
+      var rNum = this.props.rNum;
       var colPerPage = this.props.colPerPage;
       var pageNum = this.props.pageNum;
+      
       if (!rlist[0].SpanOverride){
-        cells.push(<Table.Cell rowSpan = {rlist[0].rowSpan} selectable = {rlist[0].selectable}>{rlist[0].value}</Table.Cell>);
+
+        var key = rNum + "override";
+        cells.push(<Table.Cell key={key} rowSpan = {rlist[0].rowSpan} selectable = {rlist[0].selectable}>{rlist[0].value}</Table.Cell>);
       }
       for (var i=0; i < this.props.colPerPage; i++) {
         var cellData = rlist[i + 1 + pageNum * colPerPage];
@@ -137,7 +143,8 @@ const serverProtocol = "http";
             continue;
           } else {
             //console.log("push cell", cells);
-            cells.push(<Table.Cell rowSpan = {cellData.rowSpan} selectable = {cellData.selectable}>{cellData.value}</Table.Cell>);
+            var key = rNum + "c" + i
+            cells.push(<Table.Cell key = {key} rowSpan = {cellData.rowSpan} selectable = {cellData.selectable}>{cellData.value}</Table.Cell>);
             
           }          
       }
@@ -162,9 +169,9 @@ const serverProtocol = "http";
         let row = [];
         let hourCell = {rowSpan:1, selectable:false, SpanOverride:false, value:""};
         if ( h % 2 == 0 ){
-          row.push({rowSpan:2, selectable:false, SpanOverride:false, value:momentParser.format("hh:mm a")});
+          row.push({key:h, rowSpan:2, selectable:false, SpanOverride:false, value:momentParser.format("hh:mm a")});
         } else if (h % 2 == 1) {
-          row.push({rowSpan:1, selectable:false, SpanOverride:true, value:""});
+          row.push({key:h, rowSpan:1, selectable:false, SpanOverride:true, value:""});
         }        
         momentParser.add(30, "m");
 
@@ -173,7 +180,7 @@ const serverProtocol = "http";
           row.push(cellData);
         }
         //console.log("datarow", row);
-        rMatrixJSX.push(<TRowSlot id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
+        rMatrixJSX.push(<TRowSlot key={"hour"+h} id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
         //rMatrixJSX.push(<Table.Row><Table.Cell rowSpan = '1' selectable = 'true'></Table.Cell></Table.Row>);
         
       }
@@ -191,6 +198,14 @@ const serverProtocol = "http";
     constructor(props) {
       super(props);
       this.state = {resp: null};
+    }
+
+    logout = () => {
+      document.cookie = "data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      console.log("this", this);
+      this.setState({
+        resp: null
+      });
     }
 
     componentDidMount() {
@@ -223,6 +238,7 @@ const serverProtocol = "http";
         return (
           <div>
             <p>Hello, {this.state.resp.Username}</p>
+            <Button onClick={this.logout}>Log out</Button>
             <CtrlPanel isAdmin = {this.state.resp.CommonPermissions.indexOf("basicAdmin") > -1} />
           </div>
         );
@@ -230,8 +246,8 @@ const serverProtocol = "http";
       } else {
         return (
           <p>
-            <Button>Login</Button>
-            <a href="/login">login here</a>
+            <Button to="/login" as = {Link}>login</Button>
+            <Button  to = "/signup" as = {Link}>signup</Button>
           </p>
         );
       }
@@ -247,10 +263,7 @@ const serverProtocol = "http";
           <nav>
             {/*<Link to="/dashboard">Admin Control Panel</Link>*/}
             <Link to="/adminview">Admin Control Panel</Link>
-          </nav>
-          <div>
-            <Route path="/adminview" component={AdminView}/>
-          </div>
+          </nav>          
         </div>
           
         );
@@ -302,6 +315,7 @@ const serverProtocol = "http";
 
     handleItemClick = name => this.setState({ activeItem: name })
     toggleVisibility = () => this.setState({ visible: !this.state.visible })
+    
   
     render() {
       const { activeItem } = this.state || {}
@@ -324,28 +338,35 @@ const serverProtocol = "http";
             */}  
 
 
-              <Menu.Item name='rooms' active={activeItem === 'rooms'} onClick={this.handleItemClick} href="/adminview/rooms">
-                <Link to="/adminview/rooms"><Icon name='browser' /> Manage Rooms</Link>
+              <Menu.Item name='rooms' active={activeItem === 'rooms'} onClick={this.handleItemClick} as = {Link} to="/adminview/rooms">
+               <Icon name='browser' /> Manage Rooms
               </Menu.Item>
-              <Menu.Item name='users' active={activeItem === 'users'} onClick={this.handleItemClick}>
-                <Link to="/adminview/users">
+
+              <Menu.Item name='resources' active={activeItem === 'resources'} onClick={this.handleItemClick} as = {Link} to="/adminview/resources">
+                <Icon name='tags' /> Manage Resources and Tags
+              </Menu.Item>
+
+
+              <Menu.Item name='users' active={activeItem === 'users'} onClick={this.handleItemClick} as = {Link} to="/adminview/users">
+                
                 <Icon name='users' />
                 Manage Users
-                </Link>
+
               </Menu.Item>
-              <Menu.Item name='stats' active={activeItem === 'stats'} onClick={this.handleItemClick}>
-                <Link to="/adminview/stats">
+              <Menu.Item name='stats' active={activeItem === 'stats'} onClick={this.handleItemClick} as = {Link} to="/adminview/stats">
+                
                 <Icon name='bar chart' />
                 Stats
-                </Link>
+
               </Menu.Item>
             </Sidebar>
             <Sidebar.Pusher>
               <Segment basic>
               <Header as='h3'><Button onClick={this.toggleVisibility}>Menu</Button> Application Content</Header>
-              <Route path={'/adminview/rooms'}component={ManageRooms}/>
-              <Route path={'/adminview/users'}component={ManageUsers}/>
-              <Route path={'/adminview/stats'}component={ShowStats}/>
+              <Route path={'/adminview/rooms'} component={ManageRooms}/>
+              <Route path={'/adminview/resources'} component={ManageRes}/>
+              <Route path={'/adminview/users'} component={ManageUsers}/>
+              <Route path={'/adminview/stats'} component={ShowStats}/>
                 
                 
                 <br/><br/><br/><br/><br/><br/><br/>
@@ -367,9 +388,60 @@ const serverProtocol = "http";
           <div className="ManageRooms">
             <p>Manage rooms</p>
 
+            <p>Add room</p>
+            <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/addresource'} method="post">
+            <Form.Field>
+              <label>Room name</label>
+              <input placeholder='Room name' />
+            </Form.Field>
+            <Form.Field>
+              <label>Last Name</label>
+              <input placeholder='Last Name' />
+            </Form.Field>
+            <Form.Field>
+              <Checkbox label='I agree to the Terms and Conditions' />
+            </Form.Field>
+            <Button type='submit'>Submit</Button>
+          </Form>
+
+
+            <p>Remove room</p>
+            <p>Edit room</p>
+
           </div>
-          )
+          )      
+    }
+  }
+
+  class ManageRes extends React.Component {
+    render() {
       
+        return (
+          <div className="ManageRes">
+            <p>Manage Resources</p>
+
+            <p>Add resource type</p>
+            <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/createNewresourceType'} method="post">
+            <Form.Field>
+              <label>resource type name</label>
+              <input placeholder='typename' />
+            </Form.Field>
+            <Form.Field>
+              <label>Last Name</label>
+              <input placeholder='Last Name' />
+            </Form.Field>
+            <Form.Field>
+              <Checkbox label='I agree to the Terms and Conditions' />
+            </Form.Field>
+            <Button type='submit'>Submit</Button>
+          </Form>
+
+
+            <p>Remove room</p>
+            <p>Edit room</p>
+
+          </div>
+          )      
     }
   }
 
@@ -399,5 +471,41 @@ const serverProtocol = "http";
     }
   }
 
+  class LoginView extends React.Component {
+    render() {
+      
+        return (
+          <div className="LoginView">
+            <p>LoginView</p>
+            <form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/login'} method="post">
+            Username:<input type="text" name="username"/>
+            Password:<input type="password" name="password"/>
+            <input type="submit" value="Login"/>
+        </form>
 
+          </div>
+          )
+      
+    }
+  }
+
+  class SignupView extends React.Component {
+    render() {
+      
+        return (
+          <div className="SignupView">
+            <p>SignupView</p>
+            <form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/createuserbysignup'} method="post">
+            Username:<input type="text" name="username"/>
+            Email:<input type="text" name="email"/>
+            Password:<input type="password" name="password"/>
+            Repeat Password:<input type="password"/>
+            <input type="submit" value="Create account"/>
+        </form>
+
+          </div>
+          )
+      
+    }
+  }
   export default App;
