@@ -74,7 +74,7 @@ type HandleResponse struct {
 func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err error) {
 	resp := HandleResponse{nil, nil}
 
-	log.Print("preprocess Data", rt, "preprocess error", err)
+	//log.Print("preprocess Data", rt, "preprocess error", err)
 
 	if err == nil && rt != nil {
 		resp.Data = rt
@@ -86,11 +86,11 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 		log.Fatal(err)
 	}
 
-	log.Print("postprocess Data", rt, "postprocess error", err)
+	//log.Print("postprocess Data", rt, "postprocess error", err)
 
 	if resp.Data != nil || resp.Error != nil {
 		rvalues, err := json.Marshal(resp)
-		log.Print("Marshal Data", rvalues)
+		//log.Print("Marshal Data", rvalues)
 		fmt.Fprintf(w, string(rvalues))
 		if err != nil {
 			log.Fatal(err)
@@ -110,27 +110,55 @@ func makePublicHandler(funcName func(http.ResponseWriter, *http.Request) (interf
 */
 func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.ResponseWriter, *http.Request) (interface{}, error)) func(http.ResponseWriter, *http.Request) {
 
+	// Need to ensure request have application/x-www-form-urlencoded header on the client side. Otherwise the server will not get the posted data.
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, _ := GetUserNamefromCookie(r)
-		restrictionNotEmpty := (len(strings.TrimSpace(requirePerm)) != 0)
-		restrictionPublic := (requirePerm == "Public")
-		//restrictionAnon := (requirePerm == "Anonymous")
-		if restrictionNotEmpty && (restrictionPublic || HasPermission(userID, requirePerm)) {
-			w, r = preprocessRequestAndReponse(w, r)
-			rt, err := funcName(w, r)
-			log.Print("raw reply from kernel", rt)
-
-			processFuncResp(w, r, rt, err)
+		if r.Method == "OPTIONS" {
+			log.Print("Received preflight")
+			if r.Header.Get("Origin") == ClientURL {
+				log.Print("preflight origin match")
+				allowedHeaders := "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization,X-CSRF-Token"
+				w.Header().Set("Access-Control-Allow-Origin", ClientURL)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+				w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+				w.Header().Set("Access-Control-Expose-Headers", "Authorization")
+				fmt.Fprintf(w, "")
+			}
 		} else {
-			http.NotFound(w, r)
-			return
+			log.Print("Enter handler, Request: ", r)
+			userID, err := GetUserNamefromCookie(r)
+			if err == nil && !IsEmptyStr(userID) {
+				log.Print("Got user name, ", userID)
+				restrictionNotEmpty := (len(strings.TrimSpace(requirePerm)) != 0)
+				restrictionPublic := (requirePerm == "Public")
+				//restrictionAnon := (requirePerm == "Anonymous")
+				if restrictionNotEmpty && (restrictionPublic || HasPermission(userID, requirePerm)) {
+					w, r = preprocessRequestAndReponse(w, r)
+					rt, err := funcName(w, r)
+					log.Print("raw reply from kernel", rt)
+
+					processFuncResp(w, r, rt, err)
+				} else {
+					log.Print("Not enough permission")
+					http.NotFound(w, r)
+				}
+			} else {
+				log.Print("Failed to get userid.")
+				http.NotFound(w, r)
+			}
+
 		}
+
 	}
 }
 
 func preprocessRequestAndReponse(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	allowedHeaders := "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization,X-CSRF-Token"
+	w.Header().Set("Access-Control-Allow-Origin", ClientURL)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+	w.Header().Set("Access-Control-Expose-Headers", "Authorization")
 
 	return w, r
 }

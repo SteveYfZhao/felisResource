@@ -477,8 +477,7 @@ const pageSize = 100;
     findUser(offset) {
       var resp = null;
       var self = this;
-      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/finduser', 
-        {
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/finduser', {
           userid : self.state.userid,
           email : self.state.email,
           offset: offset,
@@ -543,7 +542,7 @@ const pageSize = 100;
           <div className="ManageUsers">
             <p>ManageUsers</p>
 
-            <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/searchUser'} method="get">
+            <Form>
             <Form.Field>
               <label>User ID</label>
               <input name="userid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>

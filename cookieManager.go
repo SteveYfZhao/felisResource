@@ -60,16 +60,23 @@ func EncodeUserDataToCipherCookie(w http.ResponseWriter, uData map[string]string
 }
 
 func DecodeCipherCookieToUserData(r *http.Request) (map[string]string, error) {
+	log.Print("Enter decoder.")
 	cipherString, err := GetUserCookie(r, "data")
 	if err != nil {
-		fmt.Println("failed to get cookie", err)
+		//fmt.Println("failed to get UserData cookie", err)
 		return nil, err
 	}
 	uData := make(map[string]string)
+	//fmt.Print("cipherString ", cipherString)
 	plainJsonString, err := decryptString(cipherString)
+	if err != nil {
+		fmt.Print("failed to decryptString cipherString, ", err)
+	}
+
+	//fmt.Print("plainJsonString ", plainJsonString)
 	err = json.Unmarshal([]byte(plainJsonString), &uData)
 	if err != nil {
-		fmt.Println("failed to get cookie", err)
+		//fmt.Print("failed to Unmarshal cookie, ", err)
 		return nil, err
 	}
 	return uData, nil
@@ -179,6 +186,7 @@ func encryptString(value string) string {
 func decryptString(cryptoText string) (string, error) {
 	currentKey, prevKey := GetEncryptionKeys()
 	rawResult := decryptStringCore(cryptoText, currentKey)
+	log.Println("raw decrypt Result: ", rawResult)
 	trialResult, err := unpackDecryptedString(rawResult)
 	if err != nil || !isJSON(trialResult) {
 		// decryption failed, try prevkey

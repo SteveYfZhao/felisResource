@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -47,30 +49,57 @@ func ListUsers(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 }
 
 func FindUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	params := []string{"userid", "email", "pageSize", "offset"}
-	paraMap := MapAllPostParams(r, params)
-	pageSize, offset := CalcPageSizeAndOffset(paraMap["pageSize"], paraMap["offset"])
+	log.Print("enter finduser ep")
+	if r.Method == "POST" {
+		err := r.ParseForm()
 
-	if !IsEmptyStr(paraMap["userid"]) || !IsEmptyStr(paraMap["email"]) {
-		rt := make([]UserInfo, pageSize)
-		db := GetDBHandle()
-		const columns = "username, email, disabled"
-		//const columns = "username, email, created, lastlogin, disabled, createdby"
-		rows, err := db.Query("SELECT "+columns+" FROM useraccount ORDER BY username OFFSET $1 ROWS LIMIT $2 WHERE username=$3 OR email=$4", offset, pageSize, paraMap["userid"], paraMap["email"])
-		if err != nil {
-			log.Fatal(err)
+		body, err1 := ioutil.ReadAll(r.Body)
+		if err1 != nil {
+			fmt.Println("error reading body:", err1)
+		} else {
+			log.Println(string(body))
 		}
 
-		i := 0
-		for rows.Next() {
-			err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Disabled))
+		fmt.Println("r.form:", r.Form)
+
+		if err == nil {
+
+			usrName := r.PostForm["userid"]
+			passemail := r.PostForm["email"]
+
+			fmt.Println("userid:", usrName)
+			fmt.Println("email:", passemail)
+		} else {
+			log.Println("Failed to parse form", err)
+		}
+	}
+
+	/*
+		params := []string{"userid", "email", "pageSize", "offset"}
+		paraMap := MapAllPostParams(r, params)
+		pageSize, offset := CalcPageSizeAndOffset(paraMap["pageSize"], paraMap["offset"])
+
+		if !IsEmptyStr(paraMap["userid"]) || !IsEmptyStr(paraMap["email"]) {
+			rt := make([]UserInfo, pageSize)
+			db := GetDBHandle()
+			const columns = "username, email, disabled"
+			//const columns = "username, email, created, lastlogin, disabled, createdby"
+			rows, err := db.Query("SELECT "+columns+" FROM useraccount ORDER BY username OFFSET $1 ROWS LIMIT $2 WHERE username=$3 OR email=$4", offset*pageSize, pageSize, paraMap["userid"], paraMap["email"])
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			i := 0
+			for rows.Next() {
+				err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Disabled))
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			return rt, nil
 		}
-		return rt, nil
-	}
-	return nil, nil
+	*/
+	return "OK", nil
 }
 
 func ListAllRolls(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -127,10 +156,12 @@ func CalcPageSizeAndOffset(rawPageSize string, rawOffset string) (int, int) {
 
 func MapAllPostParams(r *http.Request, params []string) map[string]string {
 	err := r.ParseForm()
-	rt := make(map[string]string)
-	if err == nil {
+	if err == nil && len(params) > 0 {
+		rt := make(map[string]string)
 		for _, para := range params {
-			rt[para] = r.PostForm[para][0]
+			log.Print("Para: ", para)
+			log.Print("r. PostFormValue(para): ", r.PostFormValue(para))
+			rt[para] = r.PostFormValue(para)
 		}
 		return rt
 

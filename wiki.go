@@ -23,6 +23,7 @@ const (
 	ServerPort   = "8081"
 	FrontEndPort = "3000"
 	IsDEV        = true
+	ClientURL    = "http://localhost:3000"
 )
 
 type Page struct {
@@ -126,16 +127,18 @@ func login(w http.ResponseWriter, r *http.Request) {
 				uData := make(map[string]string)
 				uData["uid"] = usrName
 				EncodeUserDataToCipherCookie(w, uData)
-				scheme, hostname := GetRootURL(r)
+				/*
+					scheme, hostname := GetRootURL(r)
 
-				fmt.Println("r.URL")
-				fmt.Println(r.URL.String())
-				fmt.Println("r.host")
-				fmt.Println(r.Host)
-				fmt.Println("r.URL.Hostname")
-				fmt.Println(r.URL.Hostname())
-				redirectURL := scheme + "://" + hostname + ":" + FrontEndPort + "/"
-				http.Redirect(w, r, redirectURL, http.StatusFound)
+					fmt.Println("r.URL")
+					fmt.Println(r.URL.String())
+					fmt.Println("r.host")
+					fmt.Println(r.Host)
+					fmt.Println("r.URL.Hostname")
+					fmt.Println(r.URL.Hostname())
+					redirectURL := scheme + "://" + hostname + ":" + FrontEndPort + "/"
+					http.Redirect(w, r, redirectURL, http.StatusFound)
+				*/
 			} else {
 				fmt.Println("Failed to login, check username/password")
 			}
