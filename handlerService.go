@@ -20,9 +20,11 @@ var endPointList = []EndPoint{
 	EndPoint{createUserbySignup, "Public"},
 
 	// user section
-	EndPoint{createUser, "clientadminperm"},
+	//EndPoint{createUser, "clientadminperm"},
 	EndPoint{enableUser, "clientadminperm"},
 	EndPoint{disableUser, "clientadminperm"},
+	EndPoint{ListUsers, "Public"},
+	EndPoint{FindUser, "Public"},
 
 	//Role and perm section
 	EndPoint{assignRoletoUser, "Public"},
@@ -62,55 +64,6 @@ func AddUserPermHandler() {
 		fmt.Println("endPoint:", endPoint)
 		http.HandleFunc(endPoint, makeRestrictiedHandlerbyPerm(ep.Permission, ep.Function))
 	}
-	/*
-		publicEndPoints := []func(http.ResponseWriter, *http.Request) (interface{}, error){
-			UserBasicInfo,
-			createUserbySignup,
-		}
-		reqClientAdmin := []func(http.ResponseWriter, *http.Request) (interface{}, error){
-			createUser,
-			enableUser,
-			disableUser,
-			assignRoletoUser,
-			removeRolefromUser,
-			createNewPerm,
-			CreateRestrcitionType,
-			CreateRestrcition,
-			UpdateRestrcition,
-			RemoveRestrcition,
-			GetRestrictionValuesCL,
-			ArchivePastBooking,
-			AddAvailTimePlan,
-		}
-		reqSuperAdmin := []func(http.ResponseWriter, *http.Request) (interface{}, error){
-			removeUser,
-			createNewRole,
-			CreateNewresourceType,
-			IsResourceTypeNameAvail,
-		}
-
-		for _, funcName := range publicEndPoints {
-			tokens := strings.Split(strings.ToLower(GetFunctionName(funcName)), ".")
-			endPoint := "/" + tokens[len(tokens)-1]
-			fmt.Println("endPoint:", endPoint)
-			http.HandleFunc(endPoint, makePublicHandler(funcName))
-		}
-
-		for _, funcName := range reqClientAdmin {
-			tokens := strings.Split(strings.ToLower(GetFunctionName(funcName)), ".")
-			endPoint := "/" + tokens[len(tokens)-1]
-			fmt.Println("endPoint:", endPoint)
-			http.HandleFunc(endPoint, makeRestrictiedHandlerbyPerm("clientadminperm", funcName))
-		}
-
-		for _, funcName := range reqSuperAdmin {
-			tokens := strings.Split(strings.ToLower(GetFunctionName(funcName)), ".")
-			endPoint := "/" + tokens[len(tokens)-1]
-			fmt.Println("endPoint:", endPoint)
-			http.HandleFunc(endPoint, makeRestrictiedHandlerbyPerm("superadminperm", funcName))
-
-		}
-	*/
 }
 
 type HandleResponse struct {
@@ -120,6 +73,8 @@ type HandleResponse struct {
 
 func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err error) {
 	resp := HandleResponse{nil, nil}
+
+	log.Print("preprocess Data", rt, "preprocess error", err)
 
 	if err == nil && rt != nil {
 		resp.Data = rt
@@ -131,8 +86,11 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 		log.Fatal(err)
 	}
 
+	log.Print("postprocess Data", rt, "postprocess error", err)
+
 	if resp.Data != nil || resp.Error != nil {
 		rvalues, err := json.Marshal(resp)
+		log.Print("Marshal Data", rvalues)
 		fmt.Fprintf(w, string(rvalues))
 		if err != nil {
 			log.Fatal(err)
@@ -140,6 +98,7 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 	}
 }
 
+/*
 func makePublicHandler(funcName func(http.ResponseWriter, *http.Request) (interface{}, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// preprocess w and r
@@ -148,7 +107,7 @@ func makePublicHandler(funcName func(http.ResponseWriter, *http.Request) (interf
 		processFuncResp(w, r, rt, err)
 	}
 }
-
+*/
 func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.ResponseWriter, *http.Request) (interface{}, error)) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +118,8 @@ func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.Respons
 		if restrictionNotEmpty && (restrictionPublic || HasPermission(userID, requirePerm)) {
 			w, r = preprocessRequestAndReponse(w, r)
 			rt, err := funcName(w, r)
+			log.Print("raw reply from kernel", rt)
+
 			processFuncResp(w, r, rt, err)
 		} else {
 			http.NotFound(w, r)

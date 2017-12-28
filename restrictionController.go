@@ -96,7 +96,7 @@ func GetRestrictionValuesCL(w http.ResponseWriter, r *http.Request) (interface{}
 
 func GetRestrictionValuesCoreLite(resourcetype, resource, restrictiontype string, userperm []string) []string {
 	db := GetDBHandle()
-	var rvalue []string
+	rvalue := make([]string, 0)
 	rows, err := db.Query(`SELECT type, restrictionvalue FROM restrictions WHERE 
 		(resourcetype=$1 OR resourcetype = '') AND 
 		(resource = $2 OR resource = '') AND 

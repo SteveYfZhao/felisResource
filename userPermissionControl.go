@@ -12,7 +12,7 @@ import (
 )
 
 //TODO: Add remove and edit logic for everything
-
+/*
 func createUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
@@ -20,9 +20,10 @@ func createUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	fmt.Println("hit createUser")
 	return "OK", nil
 }
+*/
 
 func createUserbySignup(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	fmt.Println("hit createUser")
+	fmt.Println("hit createUsersignup")
 	err := r.ParseForm()
 	if err == nil {
 		username := r.PostForm["username"][0]
@@ -46,8 +47,12 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) (interface{}, er
 			hasher := sha1.New()
 			hasher.Write([]byte(email + password + salt))
 			passwordHash := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+			salt1, _ := GenerateRandomString(128)
+			hasher1 := sha1.New()
+			hasher1.Write([]byte(email + salt1))
+			verificationhash := base64.URLEncoding.EncodeToString(hasher1.Sum(nil))
 
-			db.QueryRow("INSERT INTO useraccount(username,userid,created,createdby,email,salt,passwordhash) VALUES($1,$2,$3,$4,$5,$6,$7) returning id;", username, "", time.Now(), "self-registered", email, salt, passwordHash)
+			db.QueryRow("INSERT INTO useraccount(username,verificationhash,created,createdby,email,salt,passwordhash,disabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8) returning id;", username, verificationhash, time.Now(), "self-registered", email, salt, passwordHash, true)
 			fmt.Println("complete createUser")
 			scheme, hostname := GetRootURL(r)
 			/*
@@ -204,7 +209,7 @@ func removeRolefromPerm(w http.ResponseWriter, r *http.Request) (interface{}, er
 	return "OK", nil
 }
 
-type UserInfo struct {
+type UserBaseInfo struct {
 	Username          string
 	CommonPermissions []string
 }
@@ -214,7 +219,7 @@ func UserBasicInfo(w http.ResponseWriter, r *http.Request) (interface{}, error) 
 	cookieUsername, _ := GetUserNamefromCookie(r)
 	userBasicPerms := []string{"canAccess", "basicClient", "basicAdmin"}
 
-	rt := UserInfo{cookieUsername, userBasicPerms}
+	rt := UserBaseInfo{cookieUsername, userBasicPerms}
 
 	/*
 		rvalues, err := json.Marshal(rt)

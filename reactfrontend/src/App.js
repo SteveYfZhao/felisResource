@@ -6,7 +6,7 @@ import logo from './logo.svg';
 import './App.css';
 import axios from 'axios';
 import { BrowserRouter, Link, Route } from 'react-router-dom'
-import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image, Form } from 'semantic-ui-react';
+import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image, Form, List } from 'semantic-ui-react';
 
 var moment = require('moment');
 const hourInput = () => (
@@ -26,6 +26,7 @@ const halfhouroptions = [
 const serverPortNum = 8081;
 
 const serverProtocol = "http";
+const pageSize = 100;
 
   class App extends Component {
     render() {
@@ -215,7 +216,7 @@ const serverProtocol = "http";
       .then(function (response) {
         console.log(response);
         self.setState({
-          resp: response.data
+          resp: response.data.Data
         });
         console.log("this.state.resp", self.state.resp);
         resp = response;
@@ -446,11 +447,143 @@ const serverProtocol = "http";
   }
 
   class ManageUsers extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
+        userid: '',
+        email: '',
+        resp: null,
+      };
+  
+      this.handleInputChange = this.handleInputChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleInputChange(event) {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const name = target.name;
+
+    this.setState({
+      [name]: value
+    });
+  }
+  
+    handleSubmit(event) {
+      alert('A name was submitted: ' + this.state.value);
+      event.preventDefault();
+    }
+
+    findUser(offset) {
+      var resp = null;
+      var self = this;
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/finduser', 
+        {
+          userid : self.state.userid,
+          email : self.state.email,
+          offset: offset,
+          pageSize:20
+        }, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
+
+    listUser(offset) {
+      var resp = null;
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/listusers?pageSize='+pageSize+'&offset=' + (offset*pageSize), {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
+
+
     render() {
-      
+      let listItems = [];
+      if (this.state.resp != null) {
+        this.state.resp.forEach(function(element){
+          let status = "Disabled"
+          let statLabelColor = ""
+          if (!element.Disabled) {
+            status = "Enabled"
+            statLabelColor = "blue"
+          }
+          listItems.push(
+            <List.Item>
+            <List.Icon name='user outline' size='large' verticalAlign='middle' />
+            <List.Content>
+              <List.Header as='a'>UserID: {element.UserID } 
+                <Label color={statLabelColor}>{status}</Label>
+              </List.Header>
+              <List.Description as='a'>Email: {element.Email}</List.Description>
+            </List.Content>
+          </List.Item>);
+        });
+      }
         return (
           <div className="ManageUsers">
             <p>ManageUsers</p>
+
+            <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/searchUser'} method="get">
+            <Form.Field>
+              <label>User ID</label>
+              <input name="userid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
+            </Form.Field>
+            <Form.Field>
+              <label>Email</label>
+              <input name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
+            </Form.Field>            
+            <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
+          </Form>
+
+          <Button onClick={() =>this.listUser(0)}>Browse Users</Button>
+
+
+            <List divided relaxed>
+            {listItems}
+
+
+            <List.Item>
+              <List.Icon name='user outline' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header as='a'>Semantic-Org/Semantic-UI</List.Header>
+                <List.Description as='a'>Updated 10 mins ago</List.Description>
+              </List.Content>
+            </List.Item>
+            <List.Item>
+              <List.Icon name='github' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header as='a'>Semantic-Org/Semantic-UI-Docs</List.Header>
+                <List.Description as='a'>Updated 22 mins ago</List.Description>
+              </List.Content>
+            </List.Item>
+            <List.Item>
+              <List.Icon name='github' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header as='a'>Semantic-Org/Semantic-UI-Meteor</List.Header>
+                <List.Description as='a'>Updated 34 mins ago</List.Description>
+              </List.Content>
+            </List.Item>
+          </List>
 
           </div>
           )
