@@ -209,7 +209,7 @@ const pageSize = 100;
       });
     }
 
-    componentDidMount() {
+    getData = () => {
       var resp = null;
       var self = this;
       axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/userbasicinfo', {withCredentials: true})
@@ -225,8 +225,12 @@ const pageSize = 100;
       .catch(function (error) {
         console.log(error);
       });
-      
     }
+
+    componentDidMount() {
+      this.getData();      
+    }
+
       
     componentWillUnmount() {
       
@@ -364,9 +368,10 @@ const pageSize = 100;
             <Sidebar.Pusher>
               <Segment basic>
               <Header as='h3'><Button onClick={this.toggleVisibility}>Menu</Button> Application Content</Header>
+              <Route exact path={'/adminview'} component={ManageRooms}/>
               <Route path={'/adminview/rooms'} component={ManageRooms}/>
               <Route path={'/adminview/resources'} component={ManageRes}/>
-              <Route path={'/adminview/users'} component={ManageUsers}/>
+              <Route path={'/adminview/users'} component={ManageUser}/>
               <Route path={'/adminview/stats'} component={ShowStats}/>
                 
                 
@@ -446,7 +451,7 @@ const pageSize = 100;
     }
   }
 
-  class ManageUsers extends React.Component {
+  class ManageUserMain extends React.Component {
     constructor(props) {
       super(props);
       this.state = {
@@ -518,7 +523,9 @@ const pageSize = 100;
 
     render() {
       let listItems = [];
+      let listArea = null;
       if (this.state.resp != null) {
+        listArea = <List divided relaxed> {listItems} </List>
         this.state.resp.forEach(function(element){
           let status = "Disabled"
           let statLabelColor = ""
@@ -537,11 +544,11 @@ const pageSize = 100;
             </List.Content>
           </List.Item>);
         });
+      } else {
+        listArea = <p>Please search or browse users.</p>
       }
         return (
-          <div className="ManageUsers">
-            <p>ManageUsers</p>
-
+          <div className="ManageUserMain">
             <Form>
             <Form.Field>
               <label>User ID</label>
@@ -553,37 +560,72 @@ const pageSize = 100;
             </Form.Field>            
             <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
           </Form>
-
           <Button onClick={() =>this.listUser(0)}>Browse Users</Button>
+          {listArea}
+          </div>
+          )
+      
+    }
+  }
 
+  class ManageUser extends React.Component {
+    render() {
+      
+        return (
+          <div className="ManageUserView">
+            <p>Manage Users</p>
+            <Route exact path={'/adminview/users'} component={ManageUserMain}/>
+            <Route exact path={'/adminview/users/detail'} component={UserDetails}/>
+          </div>
+          )
+      
+    }
+  }
 
-            <List divided relaxed>
-            {listItems}
+  class UserDetails extends React.Component {
+    constructor(props) {
+      super(props);  
+      this.state = { 
+        resp: null,
+        lastUID: ""
+      };
+    }
 
+    getData = () => {
+      var resp = null;
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/userbasicinfo', {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data,
+          lastUID:self.props.uID
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
 
-            <List.Item>
-              <List.Icon name='user outline' size='large' verticalAlign='middle' />
-              <List.Content>
-                <List.Header as='a'>Semantic-Org/Semantic-UI</List.Header>
-                <List.Description as='a'>Updated 10 mins ago</List.Description>
-              </List.Content>
-            </List.Item>
-            <List.Item>
-              <List.Icon name='github' size='large' verticalAlign='middle' />
-              <List.Content>
-                <List.Header as='a'>Semantic-Org/Semantic-UI-Docs</List.Header>
-                <List.Description as='a'>Updated 22 mins ago</List.Description>
-              </List.Content>
-            </List.Item>
-            <List.Item>
-              <List.Icon name='github' size='large' verticalAlign='middle' />
-              <List.Content>
-                <List.Header as='a'>Semantic-Org/Semantic-UI-Meteor</List.Header>
-                <List.Description as='a'>Updated 34 mins ago</List.Description>
-              </List.Content>
-            </List.Item>
-          </List>
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+    }
 
+    componentDidMount() {
+      this.getData()
+    }
+
+    componentDidUpdate(){
+      if (this.props.uID != this.state.lastUID) {
+        this.getData()
+      }
+
+    }
+
+    render() {
+      let uID = this.props.uID
+        return (
+          <div className="UserDetails">
+            <p>UserDetails</p>            
           </div>
           )
       

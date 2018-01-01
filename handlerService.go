@@ -25,6 +25,7 @@ var endPointList = []EndPoint{
 	EndPoint{disableUser, "clientadminperm"},
 	EndPoint{ListUsers, "Public"},
 	EndPoint{FindUser, "Public"},
+	EndPoint{GetUserDetails, "Public"},
 
 	//Role and perm section
 	EndPoint{assignRoletoUser, "Public"},
