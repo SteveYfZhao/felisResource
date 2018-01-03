@@ -540,7 +540,7 @@ const pageSize = 100;
               <List.Header as='a'>UserID: {element.UserID } 
                 <Label color={statLabelColor}>{status}</Label>
               </List.Header>
-              <List.Description as='a'>Email: {element.Email}</List.Description>
+              <List.Description as='a'>Email: {element.Email} <Link to={"/adminview/users/detail/"+element.UserID}>Edit this user</Link></List.Description>
             </List.Content>
           </List.Item>);
         });
@@ -575,7 +575,7 @@ const pageSize = 100;
           <div className="ManageUserView">
             <p>Manage Users</p>
             <Route exact path={'/adminview/users'} component={ManageUserMain}/>
-            <Route exact path={'/adminview/users/detail'} component={UserDetails}/>
+            <Route path={'/adminview/users/detail/:uid'} component={UserDetails}/>
           </div>
           )
       
@@ -593,13 +593,15 @@ const pageSize = 100;
 
     getData = () => {
       var resp = null;
+      let uID = this.props.match.params.uid
       var self = this;
-      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/userbasicinfo', {withCredentials: true})
+      if (uID) {
+        axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/getuserdetails?uid='+uID, {withCredentials: true})
       .then(function (response) {
         console.log(response);
         self.setState({
           resp: response.data.Data,
-          lastUID:self.props.uID
+          lastUID:uID
         });
         console.log("this.state.resp", self.state.resp);
         resp = response;
@@ -608,6 +610,8 @@ const pageSize = 100;
       .catch(function (error) {
         console.log(error);
       });
+      }
+      
     }
 
     componentDidMount() {
@@ -615,17 +619,19 @@ const pageSize = 100;
     }
 
     componentDidUpdate(){
-      if (this.props.uID != this.state.lastUID) {
+      if (this.props.match.params.uid != this.state.lastUID) {
         this.getData()
       }
 
     }
 
     render() {
-      let uID = this.props.uID
+      let uID = this.props.match.params.uid
         return (
           <div className="UserDetails">
-            <p>UserDetails</p>            
+            <p>UserDetails</p>   
+            <p>UID: {uID}</p>
+
           </div>
           )
       

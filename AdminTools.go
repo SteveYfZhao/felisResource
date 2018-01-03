@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,17 @@ type UserInfo struct {
 	Lastlogin   time.Time
 	Disabled    bool
 	Createdby   string
+	Roles       []string
+	Permissions []string
+}
+
+type UserInfoNullable struct {
+	UserID      sql.NullString
+	Email       sql.NullString
+	Created     sql.NullString
+	Lastlogin   sql.NullString
+	Disabled    sql.NullBool
+	Createdby   sql.NullString
 	Roles       []string
 	Permissions []string
 }
@@ -89,10 +101,12 @@ func FindUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 }
 
 func GetUserDetails(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	uID := r.Form.Get("uid")
-	uData := UserInfo{}
+
+	uID := r.URL.Query().Get("uid")
+	uData := UserInfoNullable{}
 	db := GetDBHandle()
-	err := db.QueryRow("SELECT username, email, disabled, created, lastlogin, Createdby FROM useraccount WHERE username = $1").Scan(&(uData.UserID), &(uData.Email), &(uData.Disabled), &(uData.Created), &(uData.Lastlogin), &(uData.Createdby))
+	log.Print("uid", uID, len(uID))
+	err := db.QueryRow("SELECT username, email, disabled, created, lastlogin, Createdby FROM useraccount WHERE username = $1", uID).Scan(&(uData.UserID), &(uData.Email), &(uData.Disabled), &(uData.Created), &(uData.Lastlogin), &(uData.Createdby))
 	if err != nil {
 		log.Print("Error getting basic info", err)
 		return nil, err
