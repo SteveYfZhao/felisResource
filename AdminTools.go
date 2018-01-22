@@ -21,8 +21,8 @@ type UserInfo struct {
 	Lastlogin   time.Time
 	Disabled    bool
 	Createdby   string
-	Roles       []string
-	Permissions []string
+	Roles       map[string]bool
+	Permissions map[string]bool
 }
 
 type UserInfoNullable struct {
@@ -111,9 +111,56 @@ func GetUserDetails(w http.ResponseWriter, r *http.Request) (interface{}, error)
 		log.Print("Error getting basic info", err)
 		return nil, err
 	}
-	uData.Roles = GetAllRolesOfUser(uID)
-	uData.Permissions = GetAllPermsofUser(uID)
-	return uData, err
+	uDataValue := UserInfo{}
+	// init maps to avoid errors
+	uDataValue.Roles = make(map[string]bool)
+	uDataValue.Permissions = make(map[string]bool)
+	if uData.UserID.Valid {
+		uDataValue.UserID = uData.UserID.String
+	}
+
+	if uData.Email.Valid {
+		uDataValue.Email = uData.Email.String
+	}
+	if uData.Disabled.Valid {
+		uDataValue.Disabled = uData.Disabled.Bool
+	}
+	if uData.Created.Valid {
+		layout := "2006-01-02T11:04:05-04"
+		time, err := time.Parse(uData.Created.String, layout)
+		if err == nil {
+			uDataValue.Created = time
+		}
+	}
+	if uData.Lastlogin.Valid {
+		layout := "2006-01-02T11:04:05-04"
+		time, err := time.Parse(uData.Lastlogin.String, layout)
+		if err == nil {
+			uDataValue.Lastlogin = time
+		}
+	}
+	if uData.Createdby.Valid {
+		uDataValue.Createdby = uData.Createdby.String
+	}
+	allRoles := AllRolesSlim()
+	allPerms := AllPermsSlim()
+	uRoles := GetAllRolesOfUser(uID)
+	uPerms := GetAllPermsofUser(uID)
+
+	for _, roleName := range allRoles {
+		uDataValue.Roles[roleName] = false
+	}
+	for _, uR := range uRoles {
+		uDataValue.Roles[uR] = true
+	}
+
+	for _, permName := range allPerms {
+		uDataValue.Permissions[permName] = false
+	}
+	for _, uP := range uPerms {
+		uDataValue.Permissions[uP] = true
+	}
+	return uDataValue, err
 }
 
 func ListAllRolls(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -121,7 +168,7 @@ func ListAllRolls(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	rt := make([]string, pageSize)
 	db := GetDBHandle()
 	const columns = "rolename"
-	rows, err := db.Query("SELECT "+columns+" FROM rolelist ORDER BY rolename OFFSET $1 ROWS  LIMIT $2", offset, pageSize)
+	rows, err := db.Query("SELECT "+columns+" FROM rolelist ORDER BY rolename OFFSET $1 ROWS  LIMIT $2;", offset, pageSize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,12 +183,30 @@ func ListAllRolls(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return rt, nil
 }
 
+func AllRolesSlim() []string {
+	db := GetDBHandle()
+	rows, err := db.Query("SELECT rolename FROM rolelist ORDER BY rolename;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return RowsToStringSlice(rows)
+}
+
+func AllPermsSlim() []string {
+	db := GetDBHandle()
+	rows, err := db.Query("SELECT permissionname FROM permissionlist ORDER BY permissionname;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return RowsToStringSlice(rows)
+}
+
 func ListAllPerms(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	pageSize, offset := RegulatePageSizeAndOffset(r.Form.Get("pageSize"), r.Form.Get("offset"))
 	rt := make([]string, pageSize)
 	db := GetDBHandle()
 	const columns = "permissionname"
-	rows, err := db.Query("SELECT "+columns+" FROM permissionlist ORDER BY permissionname OFFSET $1 ROWS  LIMIT $2", offset, pageSize)
+	rows, err := db.Query("SELECT "+columns+" FROM permissionlist ORDER BY permissionname OFFSET $1 ROWS  LIMIT $2;", offset, pageSize)
 	if err != nil {
 		log.Fatal(err)
 	}

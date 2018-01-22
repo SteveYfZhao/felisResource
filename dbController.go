@@ -1,13 +1,16 @@
 package main
+
 import (
 	//"errors"
 	"fmt"
 	//"regexp"
 	//"strings"
-	"log"
 	"database/sql"
+	"log"
+
 	_ "github.com/lib/pq"
 )
+
 const (
 	DB_USER     = "postgres"
 	DB_PASSWORD = "111111"
@@ -35,11 +38,11 @@ func CloseDBHandle() {
 	dbhandle.Close()
 }
 
-func createInitialTables(){
-	
+func createInitialTables() {
+
 }
 
-func rowsToStringSlice(rows *sql.Rows) []string {
+func RowsToStringSlice(rows *sql.Rows) []string {
 	var result []string
 	for rows.Next() {
 		var row string

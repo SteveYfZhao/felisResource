@@ -84,7 +84,8 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 	if err != nil && IsDEV == true {
 		resp.Data = rt
 		resp.Error = err
-		log.Fatal(err)
+		//log.Fatal(err)
+		log.Print(err)
 	}
 
 	//log.Print("postprocess Data", rt, "postprocess error", err)
@@ -94,7 +95,8 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 		//log.Print("Marshal Data", rvalues)
 		fmt.Fprintf(w, string(rvalues))
 		if err != nil {
-			log.Fatal(err)
+			//log.Fatal(err)
+		log.Print(err)
 		}
 	}
 }

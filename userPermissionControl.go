@@ -12,6 +12,22 @@ import (
 )
 
 //TODO: Add remove and edit logic for everything
+
+//Role and Permission design
+/*
+The system only have four level of permissions:
+1 basic user
+2 pro user
+3 admin
+4 super admin
+
+each perm contains all power of the previous one and some more.
+
+by default there should be 4 roles match the permissions. admin can create more roles.
+
+
+*/
+
 /*
 func createUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
@@ -67,10 +83,10 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) (interface{}, er
 			redirectURL := scheme + "://" + hostname + ":" + FrontEndPort + "/login"
 			http.Redirect(w, r, redirectURL, http.StatusFound)
 			return "OK", nil
-		} else {
-			fmt.Println("user/email exists. Cannot createUser")
-			return "OK", errors.New("user/email exists. Cannot createUser")
 		}
+		fmt.Println("user/email exists. Cannot createUser")
+		return "OK", errors.New("user/email exists. Cannot createUser")
+
 	}
 	return nil, err
 }
@@ -283,7 +299,7 @@ func GetAllRolesOfUser(username string) []string {
 		log.Fatal(err)
 	}
 
-	roles := rowsToStringSlice(rows)
+	roles := RowsToStringSlice(rows)
 	return roles
 }
 
@@ -293,7 +309,7 @@ func GetAllPermsOfRole(rolename string) []string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	perms := rowsToStringSlice(rows)
+	perms := RowsToStringSlice(rows)
 	return perms
 }
 

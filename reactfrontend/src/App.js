@@ -279,8 +279,40 @@ const pageSize = 100;
   }
 
   class AdminView extends React.Component {
+    constructor(props) {
+      super(props);  
+      this.state = { 
+        isAdmin: false,
+      };
+    }
+
+    getData = () => {
+      var resp = null;
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/userbasicinfo', {withCredentials: true})
+      .then(function (response) {
+        //console.log(response);
+        if (response.data.Data.CommonPermissions.indexOf("basicAdmin") > -1) {
+          self.setState({
+            isAdmin: true
+          });
+        }        
+        //console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+    }
+
+    componentDidMount() {
+      this.getData();      
+    }
+
     render() {
-      
+      if (this.state.isAdmin) 
+      {
         return (
           <div className="AdminView">
             <SidebarLeftSlideAlong/>
@@ -305,6 +337,17 @@ const pageSize = 100;
             </Grid>*/}
           </div>
           )
+
+      } else {
+        return (
+          <div className="AdminView">
+            You do not have permission to view this page.
+          </div>
+          )
+
+      }
+      
+        
       
     }
   }
@@ -465,14 +508,14 @@ const pageSize = 100;
     }
 
     handleInputChange(event) {
-    const target = event.target;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const name = target.name;
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
 
-    this.setState({
-      [name]: value
-    });
-  }
+      this.setState({
+        [name]: value
+      });
+    }
   
     handleSubmit(event) {
       alert('A name was submitted: ' + this.state.value);
@@ -589,6 +632,38 @@ const pageSize = 100;
         resp: null,
         lastUID: ""
       };
+      this.handleInputChange = this.handleInputChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleInputChange(event) {
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
+      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
+      updatedresp[name] = value;                        //updating value
+
+      this.setState({
+        resp: updatedresp
+      });
+    }
+
+    handleRoleInputChange(event) {
+      const target = event.target;
+      const value = target.checked;
+      const name = target.name;
+
+      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
+      updatedresp.Roles[name] = value;                        //updating value
+
+      this.setState({
+        resp: updatedresp
+      });
+    }
+  
+    handleSubmit(event) {
+      alert('A name was submitted: ' + this.state.value);
+      event.preventDefault();
     }
 
     getData = () => {
@@ -598,7 +673,7 @@ const pageSize = 100;
       if (uID) {
         axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/getuserdetails?uid='+uID, {withCredentials: true})
       .then(function (response) {
-        console.log(response);
+        console.log("response", response);
         self.setState({
           resp: response.data.Data,
           lastUID:uID
@@ -626,14 +701,46 @@ const pageSize = 100;
     }
 
     render() {
-      let uID = this.props.match.params.uid
-        return (
-          <div className="UserDetails">
-            <p>UserDetails</p>   
-            <p>UID: {uID}</p>
+      let uID = this.props.match.params.uid;
+      let serverresp = this.state.resp;
+      let output = <div></div>;
+      let roleuis = [];
 
-          </div>
-          )
+      
+
+      
+      if (serverresp!=null){
+        for (var rol in serverresp.Roles){
+          if (!serverresp.Roles.hasOwnProperty(rol)) continue;
+          roleuis.push(
+            <Form.Field>
+            <Checkbox label = {rol} name={rol} checked={this.state.resp.Roles[rol]} onChange={this.handleRoleInputChange}/>
+            </Form.Field>
+          );
+        }
+        output= <div className="UserDetails">
+        <h2>UserDetails</h2>   
+        <p>UID: {uID}</p>
+        <p>Created: {serverresp.Created}</p>
+        <p>Lastlogin: {serverresp.Lastlogin}</p>
+
+        <Form>
+        <Form.Field>
+          
+          <Checkbox label = "Disabled" toggle name="disabled" checked={this.state.resp.Disabled} onChange={this.handleInputChange}/>          
+        </Form.Field>
+        <Form.Field>
+          <label>Email</label>
+          <input name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
+        </Form.Field>
+        <h3>Roles</h3>
+        {roleuis}
+        <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
+      </Form>
+        <p>{JSON.stringify(serverresp)}</p>
+      </div>
+      }
+        return (output);
       
     }
   }
