@@ -19,7 +19,7 @@ type UserInfo struct {
 	Email       string
 	Created     time.Time
 	Lastlogin   time.Time
-	Disabled    bool
+	Enabled     bool
 	Createdby   string
 	Roles       map[string]bool
 	Permissions map[string]bool
@@ -30,7 +30,7 @@ type UserInfoNullable struct {
 	Email       sql.NullString
 	Created     sql.NullString
 	Lastlogin   sql.NullString
-	Disabled    sql.NullBool
+	Enabled     sql.NullBool
 	Createdby   sql.NullString
 	Roles       []string
 	Permissions []string
@@ -43,8 +43,8 @@ func ListUsers(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	rt := make([]UserInfo, pageSize)
 	db := GetDBHandle()
-	//const columns = "username, email, created, lastlogin, disabled, createdby"
-	const columns = "username, email, disabled"
+	//const columns = "username, email, created, lastlogin, enabled, createdby"
+	const columns = "username, email, enabled"
 	rows, err := db.Query("SELECT "+columns+" FROM useraccount ORDER BY username OFFSET $1 ROWS LIMIT $2", offset, pageSize)
 	if err != nil {
 		log.Fatal(err)
@@ -52,7 +52,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	i := 0
 	rtprt := &rt
 	for rows.Next() {
-		err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Disabled))
+		err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Enabled))
 		if err != nil {
 			log.Print(err)
 		}
@@ -79,7 +79,7 @@ func FindUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		}
 		rt := make([]UserInfo, pageSize)
 		db := GetDBHandle()
-		const columns string = "username, email, disabled"
+		const columns string = "username, email, enabled"
 		rows, err := db.Query("SELECT "+columns+" FROM useraccount WHERE username = $1 OR email=$2 OFFSET $3 ROWS LIMIT $4", paraMap["userid"], paraMap["email"], offset*pageSize, pageSize)
 		if err != nil {
 			log.Fatal(err)
@@ -87,7 +87,7 @@ func FindUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 		i := 0
 		for rows.Next() {
-			err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Disabled))
+			err := rows.Scan(&(rt[i].UserID), &(rt[i].Email), &(rt[i].Enabled))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -106,7 +106,7 @@ func GetUserDetails(w http.ResponseWriter, r *http.Request) (interface{}, error)
 	uData := UserInfoNullable{}
 	db := GetDBHandle()
 	log.Print("uid", uID, len(uID))
-	err := db.QueryRow("SELECT username, email, disabled, created, lastlogin, Createdby FROM useraccount WHERE username = $1", uID).Scan(&(uData.UserID), &(uData.Email), &(uData.Disabled), &(uData.Created), &(uData.Lastlogin), &(uData.Createdby))
+	err := db.QueryRow("SELECT username, email, enabled, created, lastlogin, Createdby FROM useraccount WHERE username = $1", uID).Scan(&(uData.UserID), &(uData.Email), &(uData.Enabled), &(uData.Created), &(uData.Lastlogin), &(uData.Createdby))
 	if err != nil {
 		log.Print("Error getting basic info", err)
 		return nil, err
@@ -122,8 +122,8 @@ func GetUserDetails(w http.ResponseWriter, r *http.Request) (interface{}, error)
 	if uData.Email.Valid {
 		uDataValue.Email = uData.Email.String
 	}
-	if uData.Disabled.Valid {
-		uDataValue.Disabled = uData.Disabled.Bool
+	if uData.Enabled.Valid {
+		uDataValue.Enabled = uData.Enabled.Bool
 	}
 	if uData.Created.Valid {
 		layout := "2006-01-02T11:04:05-04"

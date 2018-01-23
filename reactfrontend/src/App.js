@@ -636,34 +636,62 @@ const pageSize = 100;
       this.handleSubmit = this.handleSubmit.bind(this);
     }
 
-    handleInputChange(event) {
+    handleInputChange = (event) => {
       const target = event.target;
       const value = target.type === 'checkbox' ? target.checked : target.value;
       const name = target.name;
       let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
       updatedresp[name] = value;                        //updating value
 
+      console.log("onchange fired", event.target);
+      console.log("onchange fired", event.target.checked);
+      console.log("onchange fired", event.target.value);
+
       this.setState({
         resp: updatedresp
       });
     }
 
-    handleRoleInputChange(event) {
+    handleToggleChange = (event) => {
       const target = event.target;
-      const value = target.checked;
-      const name = target.name;
+      //const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.textContent;
+      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
+      updatedresp[name] = !updatedresp[name];                        //updating value
+
+      console.log("onchange fired", event.target);
+      console.log("onchange fired", event.target.checked);
+      console.log("onchange fired", event.target.value);
+
+      this.setState({
+        resp: updatedresp
+      });
+    }
+
+    handleRoleInputChange = (event) => {
+      const target = event.target;
+      //const value = target.checked;
+      const name = target.textContent;
+
+      console.log("handleRoleInputChange fired", event.target);
+      console.log("handleRoleInputChange fired", event.target.checked);
+      console.log("handleRoleInputChange fired", event.target.value);
 
       let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
-      updatedresp.Roles[name] = value;                        //updating value
+      updatedresp.Roles[name] = !updatedresp.Roles[name];                        //updating value
 
       this.setState({
         resp: updatedresp
       });
     }
   
-    handleSubmit(event) {
+    handleSubmit = (event) => {
       alert('A name was submitted: ' + this.state.value);
       event.preventDefault();
+    }
+
+    handleCancel = () => {      
+      this.getData();
     }
 
     getData = () => {
@@ -685,8 +713,22 @@ const pageSize = 100;
       .catch(function (error) {
         console.log(error);
       });
-      }
-      
+      }      
+    }
+
+    toggleUser = () => {
+      let endpoint = "disableuser"
+      if (this.state.resp.Enabled){
+        endpoint = "enableuser"
+      } 
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+ endpoint +'?username='+this.props.match.params.uid, {withCredentials: true}).then(function (response) {
+        console.log("response", response);
+        
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
     }
 
     componentDidMount() {
@@ -713,7 +755,7 @@ const pageSize = 100;
         for (var rol in serverresp.Roles){
           if (!serverresp.Roles.hasOwnProperty(rol)) continue;
           roleuis.push(
-            <Form.Field>
+            <Form.Field key = {rol}>
             <Checkbox label = {rol} name={rol} checked={this.state.resp.Roles[rol]} onChange={this.handleRoleInputChange}/>
             </Form.Field>
           );
@@ -721,22 +763,29 @@ const pageSize = 100;
         output= <div className="UserDetails">
         <h2>UserDetails</h2>   
         <p>UID: {uID}</p>
+        <p>Email: {serverresp.Email}</p>
         <p>Created: {serverresp.Created}</p>
         <p>Lastlogin: {serverresp.Lastlogin}</p>
 
         <Form>
-        <Form.Field>
+          <Form.Field>
+            <label>Enabled</label>
+            <Checkbox name="Enabled" label = "Enabled" toggle checked={this.state.resp.Enabled} onChange={this.handleToggleChange}/>          
+          </Form.Field>
+
+          {/*<Form.Field>
+            <label>Email</label>
+            <input name="Email" value={this.state.resp.Email} onChange={this.handleInputChange}/>
+          </Form.Field>*/}
+          <Button type='submit' onClick={() =>this.toggleUser()}>Save Change</Button>
           
-          <Checkbox label = "Disabled" toggle name="disabled" checked={this.state.resp.Disabled} onChange={this.handleInputChange}/>          
-        </Form.Field>
-        <Form.Field>
-          <label>Email</label>
-          <input name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
-        </Form.Field>
+        </Form>
+        <br/>
+        <Form>
         <h3>Roles</h3>
         {roleuis}
-        <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
-      </Form>
+        <Button type='submit' onClick={() =>this.findUser(0)}>Save Role Change</Button>
+        </Form>
         <p>{JSON.stringify(serverresp)}</p>
       </div>
       }

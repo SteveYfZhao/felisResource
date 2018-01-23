@@ -5,7 +5,7 @@ CREATE TABLE public.useraccount
     verificationhash character varying(200) COLLATE pg_catalog."default",
     created TIMESTAMP WITH TIME ZONE,
     lastlogin TIMESTAMP WITH TIME ZONE,
-    disabled boolean,
+    enabled boolean,
     createdby varchar(80) references useraccount(username),
     salt nvarchar(200)
     email varchar(200)

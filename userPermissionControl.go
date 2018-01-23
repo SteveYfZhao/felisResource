@@ -68,7 +68,7 @@ func createUserbySignup(w http.ResponseWriter, r *http.Request) (interface{}, er
 			hasher1.Write([]byte(email + salt1))
 			verificationhash := base64.URLEncoding.EncodeToString(hasher1.Sum(nil))
 
-			db.QueryRow("INSERT INTO useraccount(username,verificationhash,created,createdby,email,salt,passwordhash,disabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8) returning id;", username, verificationhash, time.Now(), "self-registered", email, salt, passwordHash, true)
+			db.QueryRow("INSERT INTO useraccount(username,verificationhash,created,createdby,email,salt,passwordhash,enabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8) returning id;", username, verificationhash, time.Now(), "self-registered", email, salt, passwordHash, true)
 			fmt.Println("complete createUser")
 			scheme, hostname := GetRootURL(r)
 			/*
@@ -112,7 +112,7 @@ func LoginPW(user string, pass string) bool {
 func disableUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
-	db.QueryRow("UPDATE useraccount SET disabled = 1 WHERE username=$1;", username)
+	db.QueryRow("UPDATE useraccount SET enabled = 0 WHERE username=$1;", username)
 	fmt.Println("hit disableUser")
 	return "OK", nil
 }
@@ -120,7 +120,7 @@ func disableUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 func enableUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	username := r.Form.Get("username")
 	db := GetDBHandle()
-	db.QueryRow("UPDATE useraccount SET disabled = 0 WHERE username=$1;", username)
+	db.QueryRow("UPDATE useraccount SET enabled = 1 WHERE username=$1;", username)
 	fmt.Println("hit enableUser")
 	return "OK", nil
 }
