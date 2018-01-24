@@ -150,12 +150,10 @@ func assignRoletoUser(w http.ResponseWriter, r *http.Request) (interface{}, erro
 	username := r.Form.Get("username")
 	rolename := r.Form.Get("rolename")
 	currentuser, err := GetUserNamefromCookie(r)
-	/*
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-	db.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", username, rolename, time.Now(), currentuser)
+	irow := db.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", username, rolename, time.Now(), currentuser)
+
+	log.Print(irow)
+
 	fmt.Println("hit assignRoletoUser")
 	return "OK", err
 }

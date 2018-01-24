@@ -577,13 +577,13 @@ const pageSize = 100;
             statLabelColor = "blue"
           }
           listItems.push(
-            <List.Item>
+            <List.Item key={element.UserID}>
             <List.Icon name='user outline' size='large' verticalAlign='middle' />
             <List.Content>
-              <List.Header as='a'>UserID: {element.UserID } 
+              <List.Header>UserID: {element.UserID } 
                 <Label color={statLabelColor}>{status}</Label>
               </List.Header>
-              <List.Description as='a'>Email: {element.Email} <Link to={"/adminview/users/detail/"+element.UserID}>Edit this user</Link></List.Description>
+              <List.Description>Email: {element.Email} <Link to={"/adminview/users/detail/"+element.UserID}>Edit this user</Link></List.Description>
             </List.Content>
           </List.Item>);
         });
@@ -633,7 +633,7 @@ const pageSize = 100;
         lastUID: ""
       };
       this.handleInputChange = this.handleInputChange.bind(this);
-      this.handleSubmit = this.handleSubmit.bind(this);
+      //this.handleSubmit = this.handleSubmit.bind(this);
     }
 
     handleInputChange = (event) => {
@@ -661,7 +661,7 @@ const pageSize = 100;
 
       console.log("onchange fired", event.target);
       console.log("onchange fired", event.target.checked);
-      console.log("onchange fired", event.target.value);
+
 
       this.setState({
         resp: updatedresp
@@ -671,25 +671,30 @@ const pageSize = 100;
     handleRoleInputChange = (event) => {
       const target = event.target;
       //const value = target.checked;
-      const name = target.textContent;
+      const name = target.name;
 
       console.log("handleRoleInputChange fired", event.target);
       console.log("handleRoleInputChange fired", event.target.checked);
       console.log("handleRoleInputChange fired", event.target.value);
 
-      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
-      updatedresp.Roles[name] = !updatedresp.Roles[name];                        //updating value
-
-      this.setState({
-        resp: updatedresp
-      });
+      let epName = (event.target.value)? "assignroletouser" : "removerolefromuser";
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+epName+'?username='+this.props.match.params.uid+'&rolename=' + name, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        if (response.data.Data === "OK"){
+          let updatedresp = Object.assign({}, self.state.resp);    //creating copy of object
+          updatedresp.Roles[name] = !updatedresp.Roles[name];                        //updating value
+          self.setState({
+            resp: updatedresp
+          });
+        }
+      })
+      .catch(function (error) {
+        console.log(error);
+      });       
     }
   
-    handleSubmit = (event) => {
-      alert('A name was submitted: ' + this.state.value);
-      event.preventDefault();
-    }
-
     handleCancel = () => {      
       this.getData();
     }
@@ -717,13 +722,13 @@ const pageSize = 100;
     }
 
     toggleUser = () => {
+      console.log("toggleUser");
       let endpoint = "disableuser"
-      if (this.state.resp.Enabled){
+      if (this.state.resp&&this.state.resp.Enabled){
         endpoint = "enableuser"
       } 
       axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+ endpoint +'?username='+this.props.match.params.uid, {withCredentials: true}).then(function (response) {
-        console.log("response", response);
-        
+        console.log("response", response);        
       })
       .catch(function (error) {
         console.log(error);
@@ -748,6 +753,19 @@ const pageSize = 100;
       let output = <div></div>;
       let roleuis = [];
 
+      let statusOutput = <div>
+        <p>Status: Disabled</p>
+        <Button primary onClick={() =>this.toggleUser()}>Enable this user</Button>
+      </div>
+
+      if (this.state.resp&&this.state.resp.Enabled){
+        statusOutput = <div>
+        <p>Status: Enabled</p>
+        <Button secondary onClick={() =>this.toggleUser()}>Disable this user</Button>
+      </div>
+      }
+        
+
       
 
       
@@ -756,7 +774,9 @@ const pageSize = 100;
           if (!serverresp.Roles.hasOwnProperty(rol)) continue;
           roleuis.push(
             <Form.Field key = {rol}>
-            <Checkbox label = {rol} name={rol} checked={this.state.resp.Roles[rol]} onChange={this.handleRoleInputChange}/>
+            <label> {rol} &nbsp;
+              <input name={rol} type="checkbox" checked={this.state.resp.Roles[rol]} onChange={this.handleRoleInputChange} />
+            </label>            
             </Form.Field>
           );
         }
@@ -766,25 +786,13 @@ const pageSize = 100;
         <p>Email: {serverresp.Email}</p>
         <p>Created: {serverresp.Created}</p>
         <p>Lastlogin: {serverresp.Lastlogin}</p>
+        {statusOutput}
 
-        <Form>
-          <Form.Field>
-            <label>Enabled</label>
-            <Checkbox name="Enabled" label = "Enabled" toggle checked={this.state.resp.Enabled} onChange={this.handleToggleChange}/>          
-          </Form.Field>
-
-          {/*<Form.Field>
-            <label>Email</label>
-            <input name="Email" value={this.state.resp.Email} onChange={this.handleInputChange}/>
-          </Form.Field>*/}
-          <Button type='submit' onClick={() =>this.toggleUser()}>Save Change</Button>
-          
-        </Form>
         <br/>
         <Form>
         <h3>Roles</h3>
         {roleuis}
-        <Button type='submit' onClick={() =>this.findUser(0)}>Save Role Change</Button>
+        {/*<Button type='submit' onClick={() =>this.submitRoleChanges()}>Save Role Change</Button>*/}
         </Form>
         <p>{JSON.stringify(serverresp)}</p>
       </div>

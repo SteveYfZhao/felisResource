@@ -17,7 +17,7 @@ type EndPoint struct {
 
 var endPointList = []EndPoint{
 	EndPoint{UserBasicInfo, "Public"},
-	EndPoint{createUserbySignup, "Public"},
+	EndPoint{createUserbySignup, "Anonymous"},
 
 	// user section
 	//EndPoint{createUser, "clientadminperm"},
@@ -96,7 +96,7 @@ func processFuncResp(w http.ResponseWriter, r *http.Request, rt interface{}, err
 		fmt.Fprintf(w, string(rvalues))
 		if err != nil {
 			//log.Fatal(err)
-		log.Print(err)
+			log.Print(err)
 		}
 	}
 }
@@ -129,29 +129,31 @@ func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.Respons
 			}
 		} else {
 			log.Print("Enter handler, Request: ", r)
-			userID, err := GetUserNamefromCookie(r)
-			if err == nil && !IsEmptyStr(userID) {
-				log.Print("Got user name, ", userID)
-				restrictionNotEmpty := (len(strings.TrimSpace(requirePerm)) != 0)
-				restrictionPublic := (requirePerm == "Public")
-				//restrictionAnon := (requirePerm == "Anonymous")
-				if restrictionNotEmpty && (restrictionPublic || HasPermission(userID, requirePerm)) {
-					w, r = preprocessRequestAndReponse(w, r)
-					rt, err := funcName(w, r)
-					log.Print("raw reply from kernel", rt)
+			restrictionNotEmpty := (len(strings.TrimSpace(requirePerm)) != 0)
+			restrictionAnon := (requirePerm == "Anonymous")
+			restrictionPublic := (requirePerm == "Public")
+			userID := ""
+			var err error
 
-					processFuncResp(w, r, rt, err)
+			if !restrictionAnon {
+				userID, err = GetUserNamefromCookie(r)
+				if err == nil && !IsEmptyStr(userID) {
+					log.Print("Got user name, ", userID)
 				} else {
-					log.Print("Not enough permission")
-					http.NotFound(w, r)
+					log.Print("Failed to get userid.")
 				}
-			} else {
-				log.Print("Failed to get userid.")
-				http.NotFound(w, r)
 			}
 
+			if restrictionNotEmpty && (restrictionAnon || (err == nil && !IsEmptyStr(userID) && (restrictionPublic || HasPermission(userID, requirePerm)))) {
+				w, r = preprocessRequestAndReponse(w, r)
+				rt, err := funcName(w, r)
+				log.Print("raw reply from kernel", rt)
+				processFuncResp(w, r, rt, err)
+			} else {
+				log.Print("Not enough permission")
+				http.NotFound(w, r)
+			}
 		}
-
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -226,12 +227,12 @@ func main() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		DB_USER, DB_PASSWORD, DB_NAME)
 	db, _ := sql.Open("postgres", dbinfo)
-
 	defer db.Close()
+
 	fmt.Println("# Inserting values")
 
 	var lastInsertId int
-	//db.QueryRow("INSERT INTO userinfo(username,departname,created) VALUES($1,$2,$3) returning uid;", "astaxie", "研发部门", "2012-12-09").Scan(&lastInsertId)
+	db.QueryRow("INSERT INTO userinfo(username,created) VALUES($1,$2) returning uid;", "aaaaaa1", time.Now()).Scan(&lastInsertId)
 	fmt.Println("last inserted id =", lastInsertId)
 
 	http.HandleFunc("/view/", makeHandler(viewHandler))
