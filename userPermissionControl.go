@@ -146,16 +146,27 @@ func createNewRole(w http.ResponseWriter, r *http.Request) (interface{}, error) 
 }
 
 func assignRoletoUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	fmt.Println("hit assignRoletoUser")
+
 	db := GetDBHandle()
 	username := r.Form.Get("username")
 	rolename := r.Form.Get("rolename")
 	currentuser, err := GetUserNamefromCookie(r)
-	irow := db.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", username, rolename, time.Now(), currentuser)
+	fmt.Println("username", username, "rolename", rolename, "currentuser", currentuser)
 
-	log.Print(irow)
+	exists := false
+	err1 := db.QueryRow("SELECT exists (SELECT username FROM roleassignment WHERE username=$1 AND rolename=$2)", username, rolename).Scan(&exists)
+	if err1 != nil {
+		log.Print(err1)
+	}
+	if exists {
+		return "Role already exists", err
+	}
 
-	fmt.Println("hit assignRoletoUser")
+	db.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", username, rolename, time.Now(), currentuser)
+
 	return "OK", err
+
 }
 
 func createNewPerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -209,9 +220,15 @@ func removeRolefromUser(w http.ResponseWriter, r *http.Request) (interface{}, er
 	db := GetDBHandle()
 	username := r.Form.Get("username")
 	rolename := r.Form.Get("rolename")
-	db.QueryRow("DELETE FROM roleassignment WHERE username = $1 AND rolename =$2);", username, rolename)
+	var i int
+	fmt.Println("username", username, "rolename", rolename)
+	err := db.QueryRow("DELETE FROM roleassignment WHERE username = $1 AND rolename =$2 returning id;", username, rolename).Scan(&i)
 	fmt.Println("hit removeRolefromUser")
-	return "OK", nil
+	fmt.Println("removed row", i)
+	if err != nil {
+		return "error", err
+	}
+	return "OK", err
 }
 
 func removeRolefromPerm(w http.ResponseWriter, r *http.Request) (interface{}, error) {

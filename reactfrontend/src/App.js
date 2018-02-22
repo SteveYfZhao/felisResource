@@ -677,7 +677,7 @@ const pageSize = 100;
       console.log("handleRoleInputChange fired", event.target.checked);
       console.log("handleRoleInputChange fired", event.target.value);
 
-      let epName = (event.target.value)? "assignroletouser" : "removerolefromuser";
+      let epName = (event.target.checked)? "assignroletouser" : "removerolefromuser";
       var self = this;
       axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+epName+'?username='+this.props.match.params.uid+'&rolename=' + name, {withCredentials: true})
       .then(function (response) {

@@ -218,6 +218,26 @@ func (h helloHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "hello, you've hit %s\n", r.URL.Path)
 }
 
+func TestDBwrite() {
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		DB_USER, DB_PASSWORD, DB_NAME)
+	db, _ := sql.Open("postgres", dbinfo)
+	defer db.Close()
+
+	fmt.Println("# Inserting values")
+
+	var lastInsertId int
+	db.QueryRow("INSERT INTO userinfo(username,created) VALUES($1,$2) returning uid;", "test1", time.Now()).Scan(&lastInsertId)
+	fmt.Println("test1 last inserted id =", lastInsertId)
+
+	db1 := GetDBHandle()
+	db1.QueryRow("INSERT INTO userinfo(username,created) VALUES($1,$2) returning uid;", "test2", time.Now()).Scan(&lastInsertId)
+	fmt.Println("test2 last inserted id =", lastInsertId)
+	//db1.QueryRow("INSERT INTO roleassignment(username,rolename,created,createdby) VALUES($1,$2,$3,$4) returning id;", "aaa", "sysadminrole", time.Now(), "aaa").Scan(&lastInsertId)
+	//fmt.Println("roleassign last inserted id =", lastInsertId)
+
+}
+
 func main() {
 	//p1 := &Page{Title: "TestPage", Body: []byte("This is a sample Page")}
 	//p1.save()
@@ -234,6 +254,8 @@ func main() {
 	var lastInsertId int
 	db.QueryRow("INSERT INTO userinfo(username,created) VALUES($1,$2) returning uid;", "aaaaaa1", time.Now()).Scan(&lastInsertId)
 	fmt.Println("last inserted id =", lastInsertId)
+
+	TestDBwrite()
 
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))

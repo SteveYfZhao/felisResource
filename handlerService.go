@@ -146,8 +146,10 @@ func makeRestrictiedHandlerbyPerm(requirePerm string, funcName func(http.Respons
 
 			if restrictionNotEmpty && (restrictionAnon || (err == nil && !IsEmptyStr(userID) && (restrictionPublic || HasPermission(userID, requirePerm)))) {
 				w, r = preprocessRequestAndReponse(w, r)
+				perr := r.ParseForm()
+				log.Print("try parse request parameters", perr)
 				rt, err := funcName(w, r)
-				log.Print("raw reply from kernel", rt)
+				log.Print("raw reply from kernel", rt, "error", err)
 				processFuncResp(w, r, rt, err)
 			} else {
 				log.Print("Not enough permission")
