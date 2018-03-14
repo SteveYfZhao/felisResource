@@ -431,6 +431,61 @@ const pageSize = 100;
   }
 
   class ManageRooms extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
+        resourceid: '',
+        displayname: '',
+        capacity: 1,
+        resp: null,
+      };
+  
+      this.handleInputChange = this.handleInputChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleInputChange(event) {
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
+
+      this.setState({
+        [name]: value
+      });
+    }
+  
+    handleSubmit(event) {
+      alert('A name was submitted: ' + this.state.value);
+      event.preventDefault();
+    }
+    addResource(name, capacity) {
+      var resp = null;
+      var self = this;
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/addresource', {
+          userid : self.state.userid,
+          email : self.state.email,
+          offset: offset,
+          pageSize:20
+        }, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+
+    }
+
+
+
+
+
     render() {
       
         return (
@@ -440,12 +495,16 @@ const pageSize = 100;
             <p>Add room</p>
             <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/addresource'} method="post">
             <Form.Field>
-              <label>Room name</label>
-              <input placeholder='Room name' />
+              <label>Unique ID</label>
+              <input className="form-text-input" name="resourceid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
             </Form.Field>
             <Form.Field>
-              <label>Last Name</label>
-              <input placeholder='Last Name' />
+              <label>Room name</label>
+              <input className="form-text-input" name="displayname" value={this.state.userid} placeholder='Room name' onChange={this.handleInputChange}/>
+            </Form.Field>
+            <Form.Field>
+              <label>Capacity</label>
+              <input placeholder='1' />
             </Form.Field>
             <Form.Field>
               <Checkbox label='I agree to the Terms and Conditions' />
@@ -568,7 +627,7 @@ const pageSize = 100;
       let listItems = [];
       let listArea = null;
       if (this.state.resp != null) {
-        listArea = <List divided relaxed> {listItems} </List>
+        listArea = <List divided relaxed className="userlist"> {listItems} </List>
         this.state.resp.forEach(function(element){
           let status = "Disabled"
           let statLabelColor = ""
@@ -578,33 +637,42 @@ const pageSize = 100;
           }
           listItems.push(
             <List.Item key={element.UserID}>
-            <List.Icon name='user outline' size='large' verticalAlign='middle' />
-            <List.Content>
-              <List.Header>UserID: {element.UserID } 
-                <Label color={statLabelColor}>{status}</Label>
-              </List.Header>
-              <List.Description>Email: {element.Email} <Link to={"/adminview/users/detail/"+element.UserID}>Edit this user</Link></List.Description>
-            </List.Content>
-          </List.Item>);
+              <List.Icon name='user outline' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header>
+                </List.Header>
+                <List.Description>
+                    <span>UserID: {element.UserID}</span><br/>
+                    <span>Status: {status}</span><br/>
+                    <span>Email: {element.Email}</span><br/>
+                    <Button className="editUserBtn" as = {Link} to={"/adminview/users/detail/"+element.UserID}>Edit this user</Button>
+                  
+                </List.Description>
+              </List.Content>
+            </List.Item>
+          );
         });
       } else {
         listArea = <p>Please search or browse users.</p>
       }
         return (
           <div className="ManageUserMain">
-            <Form>
-            <Form.Field>
-              <label>User ID</label>
-              <input name="userid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
-            </Form.Field>
-            <Form.Field>
-              <label>Email</label>
-              <input name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
-            </Form.Field>            
-            <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
-          </Form>
-          <Button onClick={() =>this.listUser(0)}>Browse Users</Button>
-          {listArea}
+            <div className="searchField">
+              <Form>
+                <Form.Field>
+                  {/*<label>User ID</label>*/}
+                  <input className="form-text-input" name="userid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
+                </Form.Field>
+                <Form.Field>
+                  {/*<label>Email</label>*/}
+                  <input className="form-text-input" name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
+                </Form.Field>            
+                <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
+                <Button onClick={() =>this.listUser(0)}>Browse Users</Button>
+              </Form>
+            </div>
+            
+            {listArea}
           </div>
           )
       
@@ -616,7 +684,7 @@ const pageSize = 100;
       
         return (
           <div className="ManageUserView">
-            <p>Manage Users</p>
+            <h4>Manage Users</h4>
             <Route exact path={'/adminview/users'} component={ManageUserMain}/>
             <Route path={'/adminview/users/detail/:uid'} component={UserDetails}/>
           </div>

@@ -99,6 +99,7 @@ CREATE TABLE public.resourcetypes
 CREATE TABLE public.resourcelist
 (
     id serial NOT NULL,
+    capacity INT
     resourceid varchar(80),
     displayname varchar(200) NOT NULL,
     type varchar(80) references resourcetypes(resourcetype),

@@ -22,6 +22,24 @@
   font-size: large;
 }
 
+.searchField {
+  border-bottom: 1px solid #c0c0c0;  
+  padding : 1em;
+  margin-bottom : 1em;
+}
+
+.form-text-input{
+  max-width: 80em;
+}
+
+.userlist .ui.list>.item .header, .userlist .description {
+  margin-top:0.5em;
+  margin-bottom:0.5em;
+  margin-left:0.5em;
+  line-height: 1.5rem;
+  text-align: left;
+}
+
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
