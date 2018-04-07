@@ -393,8 +393,9 @@ const pageSize = 100;
               <Menu.Item name='resources' active={activeItem === 'resources'} onClick={this.handleItemClick} as = {Link} to="/adminview/resources">
                 <Icon name='tags' /> Manage Resources and Tags
               </Menu.Item>
-
-
+              <Menu.Item name='booking' active={activeItem === 'booking'} onClick={this.handleItemClick} as = {Link} to="/adminview/booking">
+                <Icon name='tags' /> Manage booking
+              </Menu.Item>
               <Menu.Item name='users' active={activeItem === 'users'} onClick={this.handleItemClick} as = {Link} to="/adminview/users">
                 
                 <Icon name='users' />
@@ -411,11 +412,13 @@ const pageSize = 100;
             <Sidebar.Pusher>
               <Segment basic>
               <Header as='h3'><Button onClick={this.toggleVisibility}>Menu</Button> Application Content</Header>
-              <Route exact path={'/adminview'} component={ManageRooms}/>
-              <Route path={'/adminview/rooms'} component={ManageRooms}/>
+              <Route exact path={'/adminview'} component={ManageRoom}/>
+              <Route path={'/adminview/rooms'} component={ManageRoom}/>
               <Route path={'/adminview/resources'} component={ManageRes}/>
+              <Route path={'/adminview/booking'} component={ManageBooking}/>
               <Route path={'/adminview/users'} component={ManageUser}/>
               <Route path={'/adminview/stats'} component={ShowStats}/>
+              
                 
                 
                 <br/><br/><br/><br/><br/><br/><br/>
@@ -430,14 +433,19 @@ const pageSize = 100;
     }
   }
 
-  class ManageRooms extends React.Component {
+  class ManageRoomMain extends React.Component {
     constructor(props) {
       super(props);
       this.state = {
         resourceid: '',
-        displayname: '',
+        displayname: '',  
+        restype: "room",
+        viewpermission:'userperm',
+        bookpermission:'userperm',
         capacity: 1,
         resp: null,
+        resourcelist: null,
+        internalonly:false,
       };
   
       this.handleInputChange = this.handleInputChange.bind(this);
@@ -449,31 +457,55 @@ const pageSize = 100;
       const value = target.type === 'checkbox' ? target.checked : target.value;
       const name = target.name;
 
+      //console.log("handle change: type:", event.type, "checked: ", target.checked, "value:", target.value );
+
       this.setState({
         [name]: value
       });
+      if (name == "internalonly" && value) {
+        this.setState({
+          ['viewpermission']: "advuserperm",
+          ['bookpermission']: "advuserperm",
+        });
+        console.log("Change to internal");
+      } 
+      if(name == "internalonly" && !value) {
+        this.setState({
+          ['viewpermission']: "userperm",
+          ['bookpermission']: "userperm",
+        });
+        console.log("Change to normal user");
+        
+      }
     }
   
     handleSubmit(event) {
       alert('A name was submitted: ' + this.state.value);
       event.preventDefault();
     }
-    addResource(name, capacity) {
+    addResource() {
       var resp = null;
       var self = this;
+
       axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/addresource', {
-          userid : self.state.userid,
-          email : self.state.email,
-          offset: offset,
-          pageSize:20
+
+          displayname   :self.state.displayname,
+          restype       :self.state.restype,
+          viewpermission:self.state.viewpermission,
+          bookpermission:self.state.bookpermission,
+          capacity      :self.state.capacity,
+          pageSize      :20
         }, {withCredentials: true})
       .then(function (response) {
         console.log(response);
+        /*
         self.setState({
           resp: response.data.Data
         });
+        
         console.log("this.state.resp", self.state.resp);
         resp = response;
+        */
 
       })
       .catch(function (error) {
@@ -481,48 +513,287 @@ const pageSize = 100;
       }); 
 
     }
+    listResource(offset) {
+      var resp = null;
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/listresourceforadm', {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        
+        resp = response;
 
-
-
-
-
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
     render() {
+      
+
+      let listItems = [];
+      let listArea = null;
+      if (this.state.resp != null) {
+        listArea = <List divided relaxed className="item-list resource-list"> {listItems} </List>
+        this.state.resp.forEach(function(element){
+          listItems.push(
+            <List.Item key={element.id}>
+              <List.Icon name='user outline' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header>
+                </List.Header>
+                <List.Description>
+                    <span>Name: {element.displayname}</span><br/>
+
+                    <Button className="editUserBtn" as = {Link} to={"/adminview/rooms/detail/"+element.id}>Edit this room</Button>
+                  
+                </List.Description>
+              </List.Content>
+            </List.Item>
+          );
+        });
+      } else {
+        listArea = <p>Please search or browse rooms.</p>
+      }
       
         return (
           <div className="ManageRooms">
             <p>Manage rooms</p>
 
             <p>Add room</p>
-            <Form action={serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/addresource'} method="post">
+            <Form>
+            {/*
             <Form.Field>
               <label>Unique ID</label>
               <input className="form-text-input" name="resourceid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
             </Form.Field>
+            */}
             <Form.Field>
               <label>Room name</label>
-              <input className="form-text-input" name="displayname" value={this.state.userid} placeholder='Room name' onChange={this.handleInputChange}/>
+              <input className="form-text-input" name="displayname" value={this.state.displayname} placeholder='Room name' onChange={this.handleInputChange}/>
             </Form.Field>
             <Form.Field>
               <label>Capacity</label>
-              <input placeholder='1' />
+              <input className="form-text-input" name="capacity" value={this.state.capacity} placeholder='1' onChange={this.handleInputChange} />
             </Form.Field>
             <Form.Field>
-              <Checkbox label='I agree to the Terms and Conditions' />
+              <label>Available to interal users only: </label>
+                <input name="internalonly" type="checkbox" checked={this.state.internalonly} onChange={this.handleInputChange}/>
+              
             </Form.Field>
-            <Button type='submit'>Submit</Button>
+            <Button type='submit' onClick={() =>this.addResource()}>Submit</Button>
           </Form>
+
+          <br/>
+          <p>Browse Rooms</p>
+          <Button onClick={() =>this.listResource()}>Browse Rooms</Button>
+
 
 
             <p>Remove room</p>
             <p>Edit room</p>
+            {listArea}
 
           </div>
           )      
     }
   }
 
+  class RoomDetails extends React.Component {
+    constructor(props) {
+      super(props);  
+      this.state = { 
+        resp: null,
+        lastRID: ""
+      };
+      this.handleInputChange = this.handleInputChange.bind(this);
+      //this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleInputChange = (event) => {
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
+      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
+      updatedresp[name] = value;                        //updating value
+
+      console.log("onchange fired", event.target);
+      console.log("onchange fired", event.target.checked);
+      console.log("onchange fired", event.target.value);
+
+      this.setState({
+        resp: updatedresp
+      });
+    }
+/*
+    handleToggleChange = (event) => {
+      const target = event.target;
+      //const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.textContent;
+      let updatedresp = Object.assign({}, this.state.resp);    //creating copy of object
+      updatedresp[name] = !updatedresp[name];                        //updating value
+
+      console.log("onchange fired", event.target);
+      console.log("onchange fired", event.target.checked);
+
+
+      this.setState({
+        resp: updatedresp
+      });
+    }
+    */
+/*
+    handleRoleInputChange = (event) => {
+      const target = event.target;
+      //const value = target.checked;
+      const name = target.name;
+
+      console.log("handleRoleInputChange fired", event.target);
+      console.log("handleRoleInputChange fired", event.target.checked);
+      console.log("handleRoleInputChange fired", event.target.value);
+
+      let epName = (event.target.checked)? "assignroletouser" : "removerolefromuser";
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+epName+'?username='+this.props.match.params.uid+'&rolename=' + name, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        if (response.data.Data === "OK"){
+          let updatedresp = Object.assign({}, self.state.resp);    //creating copy of object
+          updatedresp.Roles[name] = !updatedresp.Roles[name];                        //updating value
+          self.setState({
+            resp: updatedresp
+          });
+        }
+      })
+      .catch(function (error) {
+        console.log(error);
+      });       
+    }
+  */
+
+    updateResource = () => {
+    var resp = null;
+    var self = this;
+    axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/editresource', {
+        displayname   :self.state.resp.displayname,
+        //restype       :self.state.resp.restype,
+        restype       :"room",
+        viewpermission:self.state.resp.viewpermission,
+        bookpermission:self.state.resp.bookpermission,
+        capacity      :self.state.resp.capacity,
+        id            :self.state.resp.id,
+      }, {withCredentials: true})
+    .then(function (response) {
+      console.log(response);
+    })
+    .catch(function (error) {
+      console.log(error);
+    }); 
+
+    }
+    handleCancel = () => {      
+      this.getData();
+    }
+
+    getData = () => {
+      var resp = null;
+      let rID = this.props.match.params.rid
+      var self = this;
+      if (rID) {
+        axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/fetchresourcedetailadm?rid='+rID, {withCredentials: true})
+      .then(function (response) {
+        console.log("response", response);
+        if (response.data.Data && response.data.Data[0]){
+          self.setState({
+            resp: response.data.Data[0],
+            lastRID:rID
+          });
+        }
+        
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+      }      
+    }
+    componentDidMount() {
+      this.getData()
+    }
+
+    componentDidUpdate(){
+      if (this.props.match.params.rid != this.state.lastRID) {
+        this.getData()
+      }
+
+    }
+
+    render() {
+      let rID = this.props.match.params.rid;
+      let serverresp = this.state.resp;
+      let output = <div></div>;
+      let roleuis = [];
+
+      if (serverresp!=null){
+
+        output= <div className="RoomDetails">
+        <Form>
+          <Form.Field>
+              <label>Room name</label>
+              <input className="form-text-input" name="displayname" value={this.state.resp.displayname} placeholder='Room name' onChange={this.handleInputChange}/>
+              <label>viewpermission</label>              
+              <input className="form-text-input" name="viewpermission" value={this.state.resp.viewpermission} placeholder='viewpermission' onChange={this.handleInputChange}/>
+              <label>bookpermission</label>              
+              <input className="form-text-input" name="bookpermission" value={this.state.resp.bookpermission} placeholder='bookpermission' onChange={this.handleInputChange}/>
+              <label>capacity</label>              
+              <input className="form-text-input" name="capacity" value={this.state.resp.capacity} placeholder='0' onChange={this.handleInputChange}/>
+            </Form.Field>
+            <Button type='submit' onClick={() =>this.updateResource()}>Update</Button>
+        </Form>
+        <p>{JSON.stringify(serverresp)}</p>
+      </div>
+      }
+        return (
+          <div className="ManageRes">
+          <h2>Room Details</h2>
+          {output}
+          </div>
+        )
+      
+    }
+  }
+
   class ManageRes extends React.Component {
     render() {
+
+      let listItems = [];
+      let listArea = null;
+      if (this.state.resp != null) {
+        listArea = <List divided relaxed className="item-list resource-list"> {listItems} </List>
+        this.state.resp.forEach(function(element){
+          listItems.push(
+            <List.Item key={element.id}>
+              <List.Icon name='user outline' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header>
+                </List.Header>
+                <List.Description>
+                    <span>Name: {element.displayname}</span><br/>
+
+                    <Button className="editUserBtn" as = {Link} to={"/adminview/users/detail/"+element.UserID}>Edit this room</Button>
+                  
+                </List.Description>
+              </List.Content>
+            </List.Item>
+          );
+        });
+      } else {
+        listArea = <p>Please search or browse rooms.</p>
+      }
       
         return (
           <div className="ManageRes">
@@ -543,10 +814,12 @@ const pageSize = 100;
             </Form.Field>
             <Button type='submit'>Submit</Button>
           </Form>
+          
 
 
-            <p>Remove room</p>
+            <p>Remove room1</p>
             <p>Edit room</p>
+            {listArea}
 
           </div>
           )      
@@ -627,7 +900,7 @@ const pageSize = 100;
       let listItems = [];
       let listArea = null;
       if (this.state.resp != null) {
-        listArea = <List divided relaxed className="userlist"> {listItems} </List>
+        listArea = <List divided relaxed className="item-list user-list"> {listItems} </List>
         this.state.resp.forEach(function(element){
           let status = "Disabled"
           let statLabelColor = ""
@@ -687,6 +960,56 @@ const pageSize = 100;
             <h4>Manage Users</h4>
             <Route exact path={'/adminview/users'} component={ManageUserMain}/>
             <Route path={'/adminview/users/detail/:uid'} component={UserDetails}/>
+          </div>
+          )
+      
+    }
+  }
+
+  class ManageRoom extends React.Component {
+    render() {      
+        return (
+          <div className="ManageRoomView">
+            <h4>Manage Rooms</h4>
+            <Route exact path={'/adminview'} component={ManageRoomMain}/>
+            <Route exact path={'/adminview/rooms'} component={ManageRoomMain}/>
+            <Route path={'/adminview/rooms/detail/:rid'} component={RoomDetails}/>
+          </div>
+          )
+      
+    }
+  }
+
+  class ManageBooking extends React.Component {
+    render() {      
+        return (
+          <div className="ManageBookingView">
+            <h4>Manage Booking</h4>
+            <Route exact path={'/adminview/bookings'} component={ManageBookingMain}/>
+            <Route path={'/adminview/bookings/detail/:bid'} component={BookingDetails}/>
+          </div>
+          )
+      
+    }
+  }
+  class ManageBookingMain extends React.Component {
+    render() {      
+        return (
+          <div className="ManageBookingMainView">
+            <h5>Manage Booking Main</h5>
+
+          </div>
+          )
+      
+    }
+  }
+
+  class BookingDetails extends React.Component {
+    render() {      
+        return (
+          <div className="BookingDetailsView">
+            <h5>Manage Booking Details</h5>
+
           </div>
           )
       

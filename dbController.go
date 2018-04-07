@@ -3,6 +3,7 @@ package main
 import (
 	//"errors"
 	"fmt"
+	"strconv"
 	//"regexp"
 	//"strings"
 	"database/sql"
@@ -53,4 +54,64 @@ func RowsToStringSlice(rows *sql.Rows) []string {
 		result = append(result, row)
 	}
 	return result
+}
+
+func queryDBTable(columns string, tablename string, order string, where string, pageSize int, offset int) (interface{}, error) {
+
+	db := GetDBHandle()
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	//const columns = "username, email, created, lastlogin, enabled, createdby"
+
+	//cols := strings.Split(columns, ",")
+	qstr := "SELECT " + columns + " FROM " + tablename
+
+	if where != "" {
+		log.Print("has where")
+		qstr = qstr + " WHERE " + where
+	}
+	if order != "" {
+		log.Print("has order")
+		qstr = qstr + " ORDER BY " + order
+	}
+	qstr = qstr + " OFFSET " + strconv.Itoa(offset) + " ROWS LIMIT " + strconv.Itoa(pageSize)
+
+	log.Print("qstr = " + qstr)
+	rows, err := db.Query(qstr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	colCount, _ := rows.Columns()
+
+	count := len(colCount)
+	//rt := make([][]interface{}, pageSize)
+	rt := make([]map[string]interface{}, pageSize)
+	i := 0
+	rtprt := &rt
+	valuePtrs := make([]interface{}, count)
+	for rows.Next() {
+		//rt[i] = make([]interface{}, count)
+		rt[i] = make(map[string]interface{})
+		tempval := make([]interface{}, count)
+		for j := 0; j < count; j++ {
+			//valuePtrs[j] = &rt[i][j]
+			valuePtrs[j] = &tempval[j]
+		}
+
+		err := rows.Scan(valuePtrs...)
+		if err != nil {
+			log.Print(err)
+		}
+		for k := 0; k < count; k++ {
+			rt[i][colCount[k]] = tempval[k]
+		}
+
+		log.Print((*rtprt)[i])
+		i++
+		log.Print("loop " + strconv.Itoa(i))
+	}
+	log.Print(rt[:i])
+	log.Print(len(rt))
+	return rt[:i], nil
 }

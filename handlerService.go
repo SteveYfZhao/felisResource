@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,17 +24,17 @@ var endPointList = []EndPoint{
 	//EndPoint{createUser, "clientadminperm"},
 	EndPoint{enableUser, "clientadminperm"},
 	EndPoint{disableUser, "clientadminperm"},
-	EndPoint{ListUsers, "Public"},
-	EndPoint{FindUser, "Public"},
-	EndPoint{GetUserDetails, "Public"},
+	EndPoint{ListUsers, "clientadminperm"},
+	EndPoint{FindUser, "clientadminperm"},
+	EndPoint{GetUserDetails, "clientadminperm"},
 
 	//Role and perm section
-	EndPoint{assignRoletoUser, "Public"},
-	EndPoint{removeRolefromUser, "Public"},
-	EndPoint{createNewPerm, "Public"},
-	EndPoint{assignRoletoPerm, "Public"},
-	EndPoint{removeRolefromPerm, "Public"},
-	EndPoint{deletePerm, "Public"},
+	EndPoint{assignRoletoUser, "clientadminperm"},
+	EndPoint{removeRolefromUser, "clientadminperm"},
+	EndPoint{createNewPerm, "clientadminperm"},
+	EndPoint{assignRoletoPerm, "clientadminperm"},
+	EndPoint{removeRolefromPerm, "clientadminperm"},
+	EndPoint{deletePerm, "clientadminperm"},
 
 	//restrictions
 	EndPoint{CreateRestrcitionType, "clientadminperm"},
@@ -45,6 +46,13 @@ var endPointList = []EndPoint{
 	//resource and bookings
 	EndPoint{ArchivePastBooking, "clientadminperm"},
 	EndPoint{AddAvailTimePlan, "clientadminperm"},
+	EndPoint{AddResource, "clientadminperm"},
+	EndPoint{BookResource, "Public"},
+	EndPoint{getAllResourceForUser, "Public"},
+	EndPoint{getAllAvailResource, "clientadminperm"},
+	EndPoint{ListResourceForAdm, "clientadminperm"},
+	EndPoint{FetchResourceDetailAdm, "clientadminperm"},
+	EndPoint{EditResource, "clientadminperm"},
 
 	// superadmin
 	EndPoint{removeUser, "superadminperm"},
@@ -168,6 +176,20 @@ func preprocessRequestAndReponse(w http.ResponseWriter, r *http.Request) (http.R
 	w.Header().Set("Access-Control-Expose-Headers", "Authorization")
 
 	return w, r
+}
+
+func extractParams(r *http.Request, param string) (string, error) {
+	if r.Method == "POST" {
+		paraMap, err := MapURLEncodedPostParams(r)
+
+		return paraMap[param], err
+	}
+
+	if r.Method == "GET" {
+		return r.Form.Get(param), nil
+	}
+
+	return "", errors.New("Unsupported request type")
 }
 
 /*

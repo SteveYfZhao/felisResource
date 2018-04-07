@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -85,7 +86,7 @@ type BookingInfo struct {
 	bookend       time.Time
 }
 
-func getAllResourceForUser(w http.ResponseWriter, r *http.Request) {
+func getAllResourceForUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	currentuser, err := GetUserNamefromCookie(r)
 	if err != nil {
 		log.Fatal(err)
@@ -97,6 +98,7 @@ func getAllResourceForUser(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, string(rvalues))
 	fmt.Println("hit getAllResourceForUser")
+	return rvalues, nil
 }
 
 func getAllResourceForUserCore(username string) *[]ResourceInfo {
@@ -119,7 +121,7 @@ func getAllResourceForUserCore(username string) *[]ResourceInfo {
 	return &result
 }
 
-func getAllAvailResource(w http.ResponseWriter, r *http.Request) *[]ResourceInfo {
+func getAllAvailResource(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	db := GetDBHandle()
 	rows, err := db.Query("SELECT id, displayname FROM resourcelist")
@@ -136,29 +138,68 @@ func getAllAvailResource(w http.ResponseWriter, r *http.Request) *[]ResourceInfo
 		}
 		result = append(result, ResourceInfo{resid, resname})
 	}
-	return &result
+	return &result, nil
 }
 
-func AddResource(w http.ResponseWriter, r *http.Request) {
-	resourceid := r.Form.Get("resourceid")
+func ListResourceForAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return queryDBTable("id, displayname", "resourcelist", "", "", 0, 0)
+}
 
-	displayname := r.Form.Get("displayname")
-	restype := r.Form.Get("type")
-	viewpermission := r.Form.Get("viewpermission")
-	bookpermission := r.Form.Get("bookpermission")
+func FetchResourceDetailAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	rid, _ := extractParams(r, "rid")
+	return queryDBTable("*", "resourcelist", "", "id="+rid, 0, 0)
+}
+
+func AddResource(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	resourceid, _ := extractParams(r, "resourceid")
+	displayname, _ := extractParams(r, "displayname")
+	restype, _ := extractParams(r, "restype")
+	viewpermission, _ := extractParams(r, "viewpermission")
+	bookpermission, _ := extractParams(r, "bookpermission")
+	capastr, _ := extractParams(r, "capacity")
+	capacity, _ := strconv.Atoi(capastr)
 	currentuser, err := GetUserNamefromCookie(r)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 	db := GetDBHandle()
+	succ := false
 
-	db.QueryRow("INSERT INTO resourcelist(resourceid,displayname,type,viewpermission,bookpermission,createdby,created) VALUES($1,$2,$3,$4,$5,$6,$7);",
-		resourceid, displayname, restype, viewpermission, bookpermission, currentuser, time.Now())
+	err = db.QueryRow("INSERT INTO resourcelist(resourceid,displayname,type,viewpermission,bookpermission,createdby,created,capacity) VALUES($1,$2,$3,$4,$5,$6,$7,$8);",
+		resourceid, displayname, restype, viewpermission, bookpermission, currentuser, time.Now(), capacity).Scan(&succ)
 
 	fmt.Println("hit AddResource")
+	return succ, err
 }
 
-func BookResource(w http.ResponseWriter, r *http.Request) {
+func EditResource(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	displayname, _ := extractParams(r, "displayname")
+	restype, _ := extractParams(r, "restype")
+	viewpermission, _ := extractParams(r, "viewpermission")
+	bookpermission, _ := extractParams(r, "bookpermission")
+	capastr, _ := extractParams(r, "capacity")
+
+	capacity, _ := strconv.Atoi(capastr)
+	fmt.Println("capastr", capastr, "capacity", capacity)
+	id, _ := extractParams(r, "id")
+	currentuser, err := GetUserNamefromCookie(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db := GetDBHandle()
+	succ := false
+
+	err = db.QueryRow("UPDATE resourcelist SET displayname = $1, type = $2, viewpermission = $3, bookpermission = $4, createdby= $5, created = $6, capacity = $7 WHERE id = $8",
+		displayname, restype, viewpermission, bookpermission, currentuser, time.Now(), capacity, id).Scan(&succ)
+
+	fmt.Println("hit EditResource")
+	return succ, err
+
+}
+
+func BookResource(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	resourceid := r.Form.Get("resourceid")
 	starttime := r.Form.Get("starttime")
 	endtime := r.Form.Get("endtime")
@@ -189,10 +230,11 @@ func BookResource(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	fmt.Println("hit AddResource")
+	fmt.Println("hit BookResource")
+	return "OK", nil
 }
 
-func cancelBooking(w http.ResponseWriter, r *http.Request) {
+func cancelBooking(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	resourceid := r.Form.Get("resourceid")
 	username := r.Form.Get("username")
 	currentuser, err := GetUserNamefromCookie(r)
@@ -203,8 +245,10 @@ func cancelBooking(w http.ResponseWriter, r *http.Request) {
 		db := GetDBHandle()
 		db.QueryRow("DELETE FROM resourcebooking WHERE resource = $1 AND bookedforuser = $2;", resourceid, username)
 		fmt.Println("hit deleteBooking")
+		return "OK", nil
 	} else {
 		fmt.Println("hit deleteBooking, but no permission")
+		return "OK", errors.New("hit deleteBooking, but no permission")
 	}
 
 }
