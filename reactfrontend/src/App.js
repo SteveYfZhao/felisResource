@@ -6,7 +6,7 @@ import logo from './logo.svg';
 import './App.css';
 import axios from 'axios';
 import { BrowserRouter, Link, Route } from 'react-router-dom'
-import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image, Form, List } from 'semantic-ui-react';
+import { Button, Grid, Icon, Label, Menu, Table, Input, Divider, Select, Checkbox, Sidebar, Segment, Header, Image, Form, List, Dropdown, Modal } from 'semantic-ui-react';
 
 var moment = require('moment');
 const hourInput = () => (
@@ -47,7 +47,164 @@ const pageSize = 100;
   }
 
   class MainView extends React.Component {
-    render() {
+    constructor(props) {
+      super(props);
+      this.state = {
+        resp: null,
+        date:moment().format("YYYY-MM-DD"),
+        startTime:null,
+        startHr:moment().format("h"),
+        startMin:"00",
+        startAmPm:moment().format("A"),
+        timeSpaninHr:1,
+        viewMode:"day",
+        bookingStatus:null
+      };
+      this.handleInputChange = this.handleInputChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+      this.handleCalChange = this.handleCalChange.bind(this);
+      this.getResBookingStatus = this.getResBookingStatus.bind(this);
+      this.changeViewMode = this.changeViewMode.bind(this);
+    }
+
+    handleInputChange(event) {
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
+
+      this.setState({
+        [name]: value
+      });
+    }
+  
+    handleSubmit(event) {
+      alert('A name was submitted: ' + this.state.value);
+      event.preventDefault();
+    }
+
+    handleCalChange(value) {
+      var datestr = moment(value._d).format("YYYY-MM-DD");
+      console.log('on panel change', value._d, datestr);
+      this.setState({
+        ["date"]: datestr
+      });
+    }
+
+    handleDropdownChange = (e, target) => {
+      this.setState({
+        [target.name]: target.value
+      });
+    }
+
+    searchAvailRoom(){
+      var startTimeTemp = this.state.date + " " + this.state.startHr + ":" + this.state.startMin ;
+      var startMmt = moment(startTimeTemp);
+      if (this.state.startAmPm == "PM") {
+        startMmt.add(12,'h')
+      }
+      var startTime = startMmt.format();
+      
+      var endTime = startMmt.add(this.state.timeSpaninHr, 'h').format();
+      console.log("startMmt", startMmt, startMmt.add(this.state.timeSpaninHr, 'h'), startMmt.add(this.state.timeSpaninHr, 'h').format("YYYY-MM-DD, h:mm a"))
+
+
+
+      var resp = null;
+      var self = this;
+
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/getbookableresforuserattime', {
+          startTime   :startTime,
+          endTime       :endTime,
+        }, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
+
+    getResBookingStatus(){
+      var startTimeTemp = this.state.date;
+      var startMmt = moment(startTimeTemp).startOf(this.state.viewMode);
+      var endMmt = moment(startTimeTemp).endOf(this.state.viewMode);
+      
+      var startTime = startMmt.format();      
+      var endTime = endMmt.format();
+      
+      console.log("start/end Time", startTime, endTime)
+
+      var resp = null;
+      var self = this;
+      var rooms = "";
+      this.state.resp.forEach(element => {
+        if (rooms.length>0) {
+          rooms = rooms + "," + element.Id
+        } else {
+          rooms = "" + element.Id
+        }        
+      });
+
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/getresbookingstatus', {
+          rooms       :rooms,
+          startTime   :startTime,
+          endTime     :endTime,
+        }, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          bookingStatus: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
+
+    changeViewMode(mode){
+      this.setState({
+        viewMode:mode
+      });
+      this.getResBookingStatus();
+    }
+
+
+    
+    render() { 
+      let listItems = [];
+      let listArea = null;
+      if (this.state.resp != null && Array.isArray(this.state.resp)) {
+        listArea = <List divided relaxed className="item-list user-list"> {listItems} </List>
+        var self = this;
+        if (this.state.resp && Array.isArray(this.state.resp)){
+          this.state.resp.forEach(function(element){
+            listItems.push(
+              <List.Item key={element.Id}>
+                <List.Icon name='user outline' size='large' verticalAlign='middle' />
+                <List.Content>
+                  <List.Header>
+                  </List.Header>
+                  <List.Description>                                  
+                      <span>Room: {element.Name}</span><br/>  
+                      <Button className="editUserBtn" >View room schedule</Button>
+                  </List.Description>
+                </List.Content>
+              </List.Item>
+            );
+          });
+        }        
+      } else {
+        listArea = <p>Please search or browse users.</p>
+      }
       return (
         <div className="MainView">
           
@@ -73,23 +230,34 @@ const pageSize = 100;
             <Grid.Row>
               <Grid.Column width={3}>
                 <p>Select date</p>
-                <Calendar />
+                <Calendar mode="date" format="YYYY-MM-DD" onChange={this.handleCalChange}/>
+                
                 <div>
-                  <Button>Only show rooms available</Button>
-                  <p>for at least <input placeholder='1' size = '2'/> hour</p>
-                  <div>from <Input type='text' size='mini' placeholder='12' action>
-                  <input size = '2'/>
-                  <Select compact options={halfhouroptions} defaultValue='00' />
-                  <Select compact options={apoptions} defaultValue='PM' />
-                </Input></div>
+                  <h3>Search available rooms</h3>
+                  <p>选中日期和时间后，右侧显示的时间也发生变化，对应的时间槽出现高亮条。（待定）Y坐标可以在小时和一周七天和一月之间切换。Day/Week/Month view。需要从服务器返回2D Array[room][booking info]</p>
+                  <div>
+                    <div>From:  
+                      <Input type='text' size='medium'  name="startHr" value={this.state.startHr}  onChange={this.handleInputChange} placeholder='12' action>
+                      <input size = '2'/>                  
+                      </Input> : 
+                      <Select compact name="startMin" value={this.state.startMin}  onChange={this.handleDropdownChange} options={halfhouroptions}  />
+                      <Select compact name="startAmPm" value={this.state.startAmPm} onChange={this.handleDropdownChange} options={apoptions}  /></div>
+                      <p>for at least <input name="timeSpaninHr" value={this.state.timeSpaninHr} onChange={this.handleInputChange} placeholder='1' size = '2'/> hour</p>
+                      <Button onClick={() =>this.searchAvailRoom()}>Search</Button>
+                    </div>
 
                   <Divider horizontal>Or</Divider>
                   <Button>Show all</Button>
+                  <Divider horizontal>Switch View</Divider>
+                  <Button onClick={()=>this.changeViewMode("day")}>Day</Button>
+                  <Button onClick={()=>this.changeViewMode("week")}>Week</Button>
+                  <Button onClick={()=>this.changeViewMode("month")}>Month</Button>
+                  {listArea}
                 </div>
               </Grid.Column>
               <Grid.Column width={13}>
                 
-                <TGrid/>
+                <TGrid bookingdata={this.state.bookingStatus}/>
               </Grid.Column>
             </Grid.Row>
 
@@ -99,6 +267,7 @@ const pageSize = 100;
     }
 
   }
+  /*
   class TCell extends React.Component {
     render() {
       if (this.props.SpanOverride) {
@@ -123,48 +292,113 @@ const pageSize = 100;
       </Table.Header>;
     }
   }
+  */
 
   class TRowSlot extends React.Component {
+    constructor (props) {
+      super(props);
+      this.state = {
+        
+      };
+      //this.handleOpen = this.handleOpen.bind(this);
+    }
+
+    handleOpen = (t,r) => {
+      console.log("fire handleopen",t,r);
+
+      this.props.showbookingmodel(t,r);
+    };
     render() {
       //this.props: rlist(array), colPerPage(int), pageNum(int)
-      var cells = [];
-      var rlist = this.props.rlist;
-      var rNum = this.props.rNum;
-      var colPerPage = this.props.colPerPage;
-      var pageNum = this.props.pageNum;
+      let cells = [];
+      let rlist = this.props.rlist;
+      let rNum = this.props.rNum;
+      let colPerPage = this.props.colPerPage;
+      let pageNum = this.props.pageNum;
+
+      //console.log("rlist", rlist);
       
       if (!rlist[0].SpanOverride){
 
         var key = rNum + "override";
         cells.push(<Table.Cell key={key} rowSpan = {rlist[0].rowSpan} selectable = {rlist[0].selectable}>{rlist[0].value}</Table.Cell>);
       }
-      for (var i=0; i < this.props.colPerPage; i++) {
-        var cellData = rlist[i + 1 + pageNum * colPerPage];
+      for (let i=0; i < this.props.colPerPage; i++) {
+        let cellData = rlist[i + 1 + pageNum * colPerPage];
           if (cellData == null || cellData.SpanOverride){
             continue;
           } else {
             //console.log("push cell", cells);
-            var key = rNum + "c" + i
-            cells.push(<Table.Cell key = {key} rowSpan = {cellData.rowSpan} selectable = {cellData.selectable}>{cellData.value}</Table.Cell>);
+            let key = rNum + "c" + i
+            cells.push(<Table.Cell key = {key} onClick={()=>this.handleOpen(cellData.cellTime, cellData.roomId)} rowSpan = {cellData.rowSpan} selectable = {cellData.selectable}>{cellData.value}</Table.Cell>);
             
           }          
       }
 
      
-      return <Table.Row>{cells}</Table.Row>;
+      return <Table.Row>
+      {cells}
+      </Table.Row>;
     }
   }
 
   class TGrid extends React.Component {
+    constructor (props) {
+      super(props);
+      this.state = {
+        bookingdata: '',
+        modalOpen: false,
+        selectedStartTime:"",
+        selectedroom:"",
+      };
+    }
+    componentDidMount () {
+      this.setState({bookingdata: this.props.bookingdata});
+    }
+
+    componentWillReceiveProps(newProps) {
+      this.setState({bookingdata: newProps.bookingdata});
+    }
+
+    handleOpen = (t,r) => {
+      console.log("t,r",t,r);
+      this.setState({ 
+        selectedStartTime: t,
+        selectedroom:r,
+        modalOpen: true 
+      })
+    }
+
+    handleClose = () => this.setState({ modalOpen: false })
+
+
     render() {
       //this.props: rlist(array), colPerPage(int), pageNum(int)
+      console.log("this.props.bookingdata",this.props.bookingdata); // after update, this logs the updated name
+      console.log("this.state.bookingdata",this.state.bookingdata);
       const hourRow = 24;
       let colPerPage = 4;
       let pageNum = 0;
+      let rHeaders = [];
       let rMatrix = [];
       let rMatrixJSX = [];
       let momentParser = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
       let totalItem = 12; // for test and debug only
+
+      if (this.state.bookingdata){
+        var dict = this.state.bookingdata;
+        for(var key in dict){
+          rHeaders.push(
+            <Table.HeaderCell key={dict[key].Id}>{dict[key].Name}</Table.HeaderCell>
+          );
+        }
+      } else {
+        for (let i = 0; i<colPerPage; i++) {
+          rHeaders.push(
+            <Table.HeaderCell key={i}>&nbsp;</Table.HeaderCell>
+          );
+        }
+      }
 
       for (let h = 0 ; h < hourRow * 2; h++){
         let row = [];
@@ -172,26 +406,68 @@ const pageSize = 100;
         if ( h % 2 == 0 ){
           row.push({key:h, rowSpan:2, selectable:false, SpanOverride:false, value:momentParser.format("hh:mm a")});
         } else if (h % 2 == 1) {
-          row.push({key:h, rowSpan:1, selectable:false, SpanOverride:true, value:""});
+          row.push({key:h, rowSpan:1, selectable:false, SpanOverride:true, value:"a"});
         }        
+        
+
+        
+        if (this.state.bookingdata){
+          var dict = this.state.bookingdata;          
+          for(var key in dict){
+            var cellData = {rowSpan:1, selectable:true, cellTime:momentParser.format("hh:mm a"), roomId:dict[key].Id,  SpanOverride:false, value:"h="+momentParser.format("hh:mm a")+" roomid= "+dict[key].Id};          
+            row.push(cellData);
+          }
+        } else {
+          for (let i = 0; i < totalItem; i++){
+            var cellData = {
+              rowSpan:1, 
+              selectable:true, 
+              SpanOverride:false, 
+              //value:"h="+momentParser.format("hh:mm a")+" c= "+i
+            };          
+            row.push(cellData);
+          }
+
+        }
         momentParser.add(30, "m");
 
-        for (let i = 0; i < totalItem; i++){
-          var cellData = {rowSpan:1, selectable:true, SpanOverride:false, value:""};          
-          row.push(cellData);
-        }
         //console.log("datarow", row);
-        rMatrixJSX.push(<TRowSlot key={"hour"+h} id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
+        rMatrixJSX.push(<TRowSlot key={"hour"+h} showbookingmodel={this.handleOpen} id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
         //rMatrixJSX.push(<Table.Row><Table.Cell rowSpan = '1' selectable = 'true'></Table.Cell></Table.Row>);
         
       }
-      return <Table celled striped structured>
-        <THeader/>
+      return (<div><Table celled striped structured>
+        <Table.Header>
+        <Table.Row>
+        <Table.HeaderCell width={2} />
+        {rHeaders}
+        </Table.Row>
+        </Table.Header>
         <Table.Body>
         {rMatrixJSX}
-        </Table.Body>
+        </Table.Body>        
+      </Table>
+      <Modal
+        trigger={<Button onClick={this.handleOpen}>Show Modal</Button>}
+        open={this.state.modalOpen}
+        onClose={this.handleClose}
         
-      </Table>;
+        size='small'
+      >
+        <Header icon='browser' content='Cookies policy' />
+        <Modal.Content>
+          <h3>This website uses cookies to ensure the best user experience.</h3>
+          <p>Start time:{this.state.selectedStartTime} </p>
+          <p>Room:{this.state.selectedroom} </p>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button color='green' onClick={this.handleClose} inverted>
+            <Icon name='checkmark' /> Got it
+          </Button>
+        </Modal.Actions>
+      </Modal>
+
+      </div>);
     }
   }
 
@@ -985,7 +1261,7 @@ const pageSize = 100;
         return (
           <div className="ManageBookingView">
             <h4>Manage Booking</h4>
-            <Route exact path={'/adminview/bookings'} component={ManageBookingMain}/>
+            <Route exact path={'/adminview/booking'} component={ManageBookingMain}/>
             <Route path={'/adminview/bookings/detail/:bid'} component={BookingDetails}/>
           </div>
           )
@@ -993,11 +1269,130 @@ const pageSize = 100;
     }
   }
   class ManageBookingMain extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
+        resp: null,
+      };
+      this.handleInputChange = this.handleInputChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleInputChange(event) {
+      const target = event.target;
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+      const name = target.name;
+
+      this.setState({
+        [name]: value
+      });
+    }
+  
+    handleSubmit(event) {
+      alert('A name was submitted: ' + this.state.value);
+      event.preventDefault();
+    }
+
+    listBooking(today) {
+      var resp = null;
+      var self = this;
+      var ep = "getbookinglistadm";
+      if (today)
+        ep = "getbookinglisttodayadm";
+
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/'+ep, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          resp: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+
+    }
+
+    delBooking(id) {
+      console.log("enter delbooking", id);
+      var resp = null;
+      var self = this;
+      axios.get(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/cancelbookingadm?bookingId=' + id, {withCredentials: true})
+      .then(function (response) {
+        if (response.data.Data == "OK"){
+          var temp = [];
+          for(var i = 0; i < self.state.resp.length; i++) {
+            if(self.state.resp[i].id !== id) {
+              temp.push(self.state.resp[i]);
+            }
+          }
+          self.setState({
+            resp: temp
+          });
+        }
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    
+    }
+
+
     render() {      
+      let listItems = [];
+      let listArea = null;
+      if (this.state.resp != null && Array.isArray(this.state.resp)) {
+        listArea = <List divided relaxed className="item-list user-list"> {listItems} </List>
+        var self = this;
+        this.state.resp.forEach(function(element){
+          listItems.push(
+            <List.Item key={element.id}>
+              <List.Icon name='user outline' size='large' verticalAlign='middle' />
+              <List.Content>
+                <List.Header>
+                </List.Header>
+                <List.Description>
+                    <span>Booked for: {element.bookedforuser}</span><br/>                    
+                    <span>Room: {element.displayname}</span><br/>
+                    <span>Start: {moment(element.bookstart).format("YYYY-MM-DD hh:mm a")}</span><br/>
+                    <span>End: {moment(element.bookend).format("YYYY-MM-DD hh:mm a")}</span><br/>
+                    <Button className="editUserBtn" as = {Link} to={"/adminview/bookings/detail/"+element.id}>Edit this booking</Button>
+                    <Button className="delBookingBtn" onClick={self.delBooking.bind(self, element.id)}>Remove this booking</Button>
+                  
+                </List.Description>
+              </List.Content>
+            </List.Item>
+          );
+        });
+      } else {
+        listArea = <p>Please search or browse users.</p>
+      }
         return (
           <div className="ManageBookingMainView">
             <h5>Manage Booking Main</h5>
-
+            <Button onClick={() =>this.listBooking(true)}>Browse Bookings</Button>
+            <div className="searchField">
+              <Form>
+                <Form.Field>
+                  {/*<label>User ID</label>*/}
+                  <input className="form-text-input" name="userid" value={this.state.userid} placeholder='User ID' onChange={this.handleInputChange}/>
+                </Form.Field>
+                <Form.Field>
+                  {/*<label>Email</label>*/}
+                  <input className="form-text-input" name="email" value={this.state.email} placeholder='Email' onChange={this.handleInputChange}/>
+                </Form.Field>            
+                <Button type='submit' onClick={() =>this.findUser(0)}>Search</Button>
+                <Button onClick={() =>this.listUser(0)}>Browse Users</Button>
+              </Form>
+            </div>
+            
+            {listArea}
           </div>
           )
       
@@ -1155,10 +1550,6 @@ const pageSize = 100;
         <Button secondary onClick={() =>this.toggleUser()}>Disable this user</Button>
       </div>
       }
-        
-
-      
-
       
       if (serverresp!=null){
         for (var rol in serverresp.Roles){

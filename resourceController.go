@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -74,16 +75,22 @@ func AddAvailTimePlan(w http.ResponseWriter, r *http.Request) (interface{}, erro
 	return nil, err
 }
 
-type ResourceInfo struct {
-	id   int
-	name string
-}
 type BookingInfo struct {
-	id            int
-	resource      string
-	bookedforuser string
-	bookstart     time.Time
-	bookend       time.Time
+	Id            int
+	ResourceId    int
+	Bookedforuser string
+	Bookstart     time.Time
+	Bookend       time.Time
+}
+type ResBaseInfo struct {
+	Id   int
+	Name string
+}
+
+type ResourceInfo struct {
+	Id          int
+	Name        string
+	BookingStat []BookingInfo
 }
 
 func getAllResourceForUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -104,7 +111,10 @@ func getAllResourceForUser(w http.ResponseWriter, r *http.Request) (interface{},
 func getAllResourceForUserCore(username string) *[]ResourceInfo {
 	userperms := GetAllPermsofUser(username)
 	db := GetDBHandle()
-	rows, err := db.Query("SELECT id, displayname FROM resourcelist WHERE viewpermission IN $1", userperms)
+	flatStr := strings.Join(userperms[:], "','")
+	fmt.Println(flatStr)
+	qstr := "SELECT id, displayname FROM resourcelist WHERE viewpermission IN ('" + flatStr + "')"
+	rows, err := db.Query(qstr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -116,7 +126,7 @@ func getAllResourceForUserCore(username string) *[]ResourceInfo {
 		if err != nil {
 			log.Fatal(err)
 		}
-		result = append(result, ResourceInfo{resid, resname})
+		result = append(result, ResourceInfo{resid, resname, nil})
 	}
 	return &result
 }
@@ -136,18 +146,55 @@ func getAllAvailResource(w http.ResponseWriter, r *http.Request) (interface{}, e
 		if err != nil {
 			log.Fatal(err)
 		}
-		result = append(result, ResourceInfo{resid, resname})
+		result = append(result, ResourceInfo{resid, resname, nil})
 	}
 	return &result, nil
 }
 
+func GetBookableResForUserAtTime(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	startTime, _ := extractParams(r, "startTime")
+	endTime, _ := extractParams(r, "endTime")
+	//1 get all res this user can see
+	currentuser, err := GetUserNamefromCookie(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	allresources := getAllResourceForUserCore(currentuser)
+	fmt.Println("allresources = ", allresources)
+	timestr := "('" + startTime + "'<=bookstart AND bookstart<=" + "'" + endTime + "'" + ") OR (" + "'" + startTime + "'<=bookend AND bookend<=" + "'" + endTime + "')"
+
+	// 2 get all unavailable resource by lookup booking table
+	bqstr := "SELECT resource, bookedforuser, bookstart, bookend FROM resourcebooking WHERE bookedforuser <> '" + currentuser + "' AND " + timestr + ";"
+	fmt.Println("bqstr = ", bqstr)
+	blocked, _ := queryDBTableAdv(bqstr)
+	fmt.Println("blocked = ", blocked)
+
+	// 3 compare and generate new list.
+
+	rt := make([]ResourceInfo, 0)
+	for _, element := range *allresources {
+		found := false
+		for _, bmap := range blocked {
+			if bmap["resource"] == strconv.Itoa(element.Id) {
+				found = true
+			}
+		}
+		if !found {
+			rt = append(rt, element)
+		}
+	}
+	fmt.Println(rt[:])
+	return rt[:], nil
+}
+
 func ListResourceForAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return queryDBTable("id, displayname", "resourcelist", "", "", 0, 0)
+	return queryDBTable("id, displayname", "resourcelist", "", "", "", 0, 0)
 }
 
 func FetchResourceDetailAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	rid, _ := extractParams(r, "rid")
-	return queryDBTable("*", "resourcelist", "", "id="+rid, 0, 0)
+	return queryDBTable("*", "resourcelist", "", "", "id="+rid, 0, 0)
 }
 
 func AddResource(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -253,6 +300,31 @@ func cancelBooking(w http.ResponseWriter, r *http.Request) (interface{}, error) 
 
 }
 
+func cancelBookingAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	bookingId := r.Form.Get("bookingId")
+	db := GetDBHandle()
+	db.QueryRow("DELETE FROM resourcebooking WHERE id = $1;", bookingId)
+	fmt.Println("hit deleteBooking")
+	return "OK", nil
+}
+
+func getBookingListAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	fmt.Println("hit getBookingListAdm")
+	return queryDBTable("*", "resourcebooking", "", "", "", 100, 0)
+}
+
+func getBookingListTodayAdm(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	daybegin := bod(time.Now())
+	dayend := daybegin.AddDate(0, 0, 1)
+	timestr := "bookstart>='" + bod(time.Now()).Format("2006-01-02 15:04:05") + "' AND bookend<='" + dayend.Format("2006-01-02 15:04:05") + "'"
+
+	fmt.Println("hit getBookingListTodayAdm", "timestr = ", timestr)
+
+	return queryDBTableAdv("SELECT resourcebooking.id, resourcebooking.resource, resourcelist.displayname, resourcebooking.bookedforuser, resourcebooking.bookstart,resourcebooking.bookend FROM resourcebooking INNER JOIN resourcelist ON resourcebooking.resource=resourcelist.id WHERE " + timestr + ";")
+
+	//return queryDBTable("*", "resourcebooking", "", "", timestr, 100, 0)
+}
+
 func ArchivePastBooking(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	return "OK", nil
@@ -291,21 +363,87 @@ func getResourceOccupiedSlot(resIds []string, dt time.Time) *[]BookingInfo {
 	year, month, day := dt.Date()
 	dtBegin := time.Date(year, month, day, 0, 0, 0, 0, dt.Location())
 	dtEnd := time.Date(year, month, day+1, 0, 0, 0, 0, dt.Location())
-	rows, err := db.Query("SELECT id, resource, bookedforuser, bookstart, bookend FROM resourcebooking WHERE resource IN $1 AND bookstart >= $2 AND bookend <= $3;", resIds, dtBegin, dtEnd)
+	rows, err := db.Query("SELECT id, resource, bookedforuser, bookstart,bookend FROM resourcebooking WHERE resource IN $1 AND bookstart >= $2 AND bookend <= $3;", resIds, dtBegin, dtEnd)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var result []BookingInfo
 	for rows.Next() {
-		var bookid int
-		var resname, bookedforuser string
+		var bookid, resid int
+		var bookedforuser string
 		var bookstart, bookend time.Time
-		err := rows.Scan(&bookid, &resname, &bookedforuser, &bookstart, &bookend)
+		err := rows.Scan(&bookid, &resid, &bookedforuser, &bookstart, &bookend)
 		if err != nil {
 			log.Fatal(err)
 		}
-		result = append(result, BookingInfo{bookid, resname, bookedforuser, bookstart, bookend})
+		result = append(result, BookingInfo{bookid, resid, bookedforuser, bookstart, bookend})
 	}
 	return &result
+}
+
+func getResBookingStatus(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	paraName := []string{"rooms", "startTime", "endTime"}
+	params, _ := extractMultiParams(r, paraName)
+	username, err := GetUserNamefromCookie(r)
+	rt := make(map[int]ResourceInfo)
+	roomsStr := params["rooms"]
+	db := GetDBHandle()
+
+	userperms := GetAllPermsofUser(username)
+	flatStr := strings.Join(userperms[:], "','")
+	qStr0 := "SELECT id, displayname FROM resourcelist WHERE id IN (" + roomsStr + ") AND viewpermission IN ('" + flatStr + "');"
+
+	rows0, err0 := db.Query(qStr0)
+	if err0 != nil {
+		log.Fatal(err0)
+	}
+
+	for rows0.Next() {
+		var id int
+		var name string
+		err1 := rows0.Scan(&id, &name)
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		resInfo := ResourceInfo{
+			Id:          id,
+			Name:        name,
+			BookingStat: make([]BookingInfo, 0),
+		}
+		rt[id] = resInfo
+	}
+
+	qStr := "SELECT id, resource,bookedforuser,bookstart,bookend FROM resourcebooking WHERE resource IN (" + roomsStr + ")"
+	//timestr := "bookstart<'" + endTime + "' OR bookend>'" + startTime + "'"
+	rows, err := db.Query(qStr+" AND bookstart >= $1 AND bookend <= $2;", params["startTime"], params["endTime"])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	currentuser, err := GetUserNamefromCookie(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//var result []BookingInfo
+	for rows.Next() {
+		var bookid, resid int
+		var bookedforuser string
+		var bookstart, bookend time.Time
+		err := rows.Scan(&bookid, &resid, &bookedforuser, &bookstart, &bookend)
+		if err != nil {
+			log.Fatal(err)
+		}
+		info := BookingInfo{bookid, resid, bookedforuser, bookstart, bookend}
+
+		if bookedforuser != currentuser {
+			info.Bookedforuser = ""
+		}
+
+		temp := rt[resid]
+		temp.BookingStat = append(temp.BookingStat, info)
+		rt[resid] = temp
+	}
+	return rt, nil
 
 }

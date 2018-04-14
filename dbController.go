@@ -56,7 +56,7 @@ func RowsToStringSlice(rows *sql.Rows) []string {
 	return result
 }
 
-func queryDBTable(columns string, tablename string, order string, where string, pageSize int, offset int) (interface{}, error) {
+func queryDBTable(columns string, tablename string, order string, join string, where string, pageSize int, offset int) (interface{}, error) {
 
 	db := GetDBHandle()
 	if pageSize <= 0 {
@@ -66,6 +66,11 @@ func queryDBTable(columns string, tablename string, order string, where string, 
 
 	//cols := strings.Split(columns, ",")
 	qstr := "SELECT " + columns + " FROM " + tablename
+
+	if join != "" {
+		log.Print("has join")
+		qstr = qstr + where
+	}
 
 	if where != "" {
 		log.Print("has where")
@@ -82,20 +87,67 @@ func queryDBTable(columns string, tablename string, order string, where string, 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	/*
+		colCount, _ := rows.Columns()
+
+		count := len(colCount)
+		//rt := make([][]interface{}, pageSize)
+		rt := make([]map[string]interface{}, pageSize)
+		i := 0
+		rtprt := &rt
+		valuePtrs := make([]interface{}, count)
+		for rows.Next() {
+			//rt[i] = make([]interface{}, count)
+			rt[i] = make(map[string]interface{})
+			tempval := make([]interface{}, count)
+			for j := 0; j < count; j++ {
+				//valuePtrs[j] = &rt[i][j]
+				valuePtrs[j] = &tempval[j]
+			}
+
+			err := rows.Scan(valuePtrs...)
+			if err != nil {
+				log.Print(err)
+			}
+			for k := 0; k < count; k++ {
+				rt[i][colCount[k]] = tempval[k]
+			}
+
+			log.Print((*rtprt)[i])
+			i++
+			log.Print("loop " + strconv.Itoa(i))
+		}
+		log.Print(rt[:i])
+		log.Print(len(rt))
+		return rt[:i], nil
+	*/
+
+	return convDBRowToDict(rows)
+}
+
+func queryDBTableAdv(qstr string) ([]map[string]string, error) {
+	db := GetDBHandle()
+	rows, err := db.Query(qstr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return convDBRowToDict(rows)
+}
+
+func convDBRowToDict(rows *sql.Rows) ([]map[string]string, error) {
 	colCount, _ := rows.Columns()
 
 	count := len(colCount)
 	//rt := make([][]interface{}, pageSize)
-	rt := make([]map[string]interface{}, pageSize)
-	i := 0
-	rtprt := &rt
+	rt := make([]map[string]string, 0)
 	valuePtrs := make([]interface{}, count)
 	for rows.Next() {
-		//rt[i] = make([]interface{}, count)
-		rt[i] = make(map[string]interface{})
+
+		tempMap := make(map[string]string)
 		tempval := make([]interface{}, count)
 		for j := 0; j < count; j++ {
-			//valuePtrs[j] = &rt[i][j]
+
 			valuePtrs[j] = &tempval[j]
 		}
 
@@ -104,14 +156,9 @@ func queryDBTable(columns string, tablename string, order string, where string, 
 			log.Print(err)
 		}
 		for k := 0; k < count; k++ {
-			rt[i][colCount[k]] = tempval[k]
+			tempMap[colCount[k]] = fmt.Sprintf("%v", tempval[k])
 		}
-
-		log.Print((*rtprt)[i])
-		i++
-		log.Print("loop " + strconv.Itoa(i))
+		rt = append(rt, tempMap)
 	}
-	log.Print(rt[:i])
-	log.Print(len(rt))
-	return rt[:i], nil
+	return rt, nil
 }

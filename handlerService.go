@@ -49,10 +49,15 @@ var endPointList = []EndPoint{
 	EndPoint{AddResource, "clientadminperm"},
 	EndPoint{BookResource, "Public"},
 	EndPoint{getAllResourceForUser, "Public"},
+	EndPoint{getResBookingStatus, "Public"},
+	EndPoint{GetBookableResForUserAtTime, "Public"},
 	EndPoint{getAllAvailResource, "clientadminperm"},
 	EndPoint{ListResourceForAdm, "clientadminperm"},
 	EndPoint{FetchResourceDetailAdm, "clientadminperm"},
 	EndPoint{EditResource, "clientadminperm"},
+	EndPoint{getBookingListAdm, "clientadminperm"},
+	EndPoint{getBookingListTodayAdm, "clientadminperm"},
+	EndPoint{cancelBookingAdm, "clientadminperm"},
 
 	// superadmin
 	EndPoint{removeUser, "superadminperm"},
@@ -190,6 +195,24 @@ func extractParams(r *http.Request, param string) (string, error) {
 	}
 
 	return "", errors.New("Unsupported request type")
+}
+
+func extractMultiParams(r *http.Request, params []string) (map[string]string, error) {
+	if r.Method == "POST" {
+		paraMap, err := MapURLEncodedPostParams(r)
+
+		return paraMap, err
+	}
+
+	if r.Method == "GET" {
+		var rt = make(map[string]string)
+		for _, val := range params {
+			rt[val] = r.Form.Get(val)
+		}
+		return rt, nil
+	}
+
+	return make(map[string]string), errors.New("Unsupported request type")
 }
 
 /*
