@@ -44,3 +44,185 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.MainView{
+  position: relative;
+}
+
+.header {
+  display: block;
+  background: #ddd;
+  min-height: 80px;
+}
+
+.flbox {
+  display: block; 
+  background: #f0f0f0; 
+  position: relative;
+  width: 100%;
+  height: 80%;
+  height: -webkit-calc(100% - 80px);
+  height: calc(100% - 80px);
+
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.gridheaderL1{
+  height: 80px;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-flex: none;
+  -webkit-flex: none;
+  flex: none;
+  overflow: hidden;
+  width: 100%;
+}
+.gridheaderL2{
+  -webkit-box-flex: 1 1 auto;
+    -webkit-flex: 1 1 auto;
+    flex: 1 1 auto;
+    display: -webkit-box;
+    display: -moz-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    overflow: hidden;
+    overflow-x: scroll;
+    
+}
+.gridbody{
+  position: relative;
+  border-top: #e0e0e0 1px solid;
+  -webkit-box-flex: 1 1 auto;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  overflow: hidden;
+
+  -webkit-box-flex: 1 1 60%;
+    -webkit-flex: 1 1 60%;
+    flex: 1 1 60%;
+}
+.gridbodyL1{
+  display: -webkit-box;
+    display: -moz-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    overflow-y: scroll;
+    -webkit-box-flex: 1 1 auto;
+    -webkit-flex: 1 1 auto;
+    flex: 1 1 auto;
+    -webkit-align-items: stretch;
+    align-items: stretch;
+    overflow: -moz-scrollbars-none;
+    -ms-overflow-style: none;
+     
+}
+.gridbodyL1::-webkit-scrollbar {
+  width: 0px !important;  /* remove scrollbar space */
+  background: transparent;  /* optional: just make scrollbar invisible */
+}
+.gridbodyL2{
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  overflow-y: scroll;
+  -webkit-box-flex: 1 1 auto;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
+.gridheader{
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-flex: none;
+  -webkit-flex: none;
+  flex: none;
+}
+
+.gridHeaderblock{
+  border-right: #e0e0e0 1px solid;
+  overflow: hidden;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-box-flex: 1 1 0%;
+  -webkit-flex: 1 1 0%;
+  flex: 1 1 0%;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+}
+.gridHeaderfiller{
+  width: 60px;
+}
+.gridaxle{
+  overflow-y: hidden;
+  -webkit-box-flex: none;
+  -webkit-flex: none;
+  flex: none;
+  height: 960px;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
+.gridaxleL1{
+  position: relative;
+    border-right: #e0e0e0 1px solid;
+    background-color: #fff;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.gridscolumn{
+  -webkit-box-flex: 1 1 auto;
+    -webkit-flex: 1 1 auto;
+    flex: 1 1 auto;
+    position: relative;
+    display: flex;
+}
+.gridHoriLn, .gridaxleblock{
+  height: 40px;
+}
+.gridHoriLn:after {
+  content: '';
+  border-bottom: #e0e0e0 1px solid;
+  position: absolute;
+  width: 100%;
+  margin-top: -1px;
+  z-index: 3;
+  pointer-events: none;
+}
+.gridCol{
+  border-right: #e0e0e0 1px solid;
+  position: relative;
+  padding-right: 12px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-box-flex: 1 1 auto;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+}
+.gridCell{
+  
+}

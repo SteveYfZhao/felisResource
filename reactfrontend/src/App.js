@@ -32,10 +32,12 @@ const pageSize = 100;
     render() {
       return (
         <div className="App">
+        {/*
           <header className="App-header">
-            {/*<img src={logo} className="App-logo" alt="logo" />*/}
+            /*<img src={logo} className="App-logo" alt="logo" />
             <h1 className="App-title"><a href="/">Felis Resource Management System</a></h1>
           </header>
+        */}
           <Route exact path="/" component={MainView}/>
           <Route path="/index" component={MainView}/> 
           <Route path="/adminview" component={AdminView}/>     
@@ -58,7 +60,7 @@ const pageSize = 100;
         startAmPm:moment().format("A"),
         timeSpaninHr:1,
         viewMode:"day",
-        bookingStatus:null
+        bookingStatus:null,
       };
       this.handleInputChange = this.handleInputChange.bind(this);
       this.handleSubmit = this.handleSubmit.bind(this);
@@ -207,8 +209,11 @@ const pageSize = 100;
       }
       return (
         <div className="MainView">
+                  {/*<p className="App-intro">
+          To get started, edit <code>src/App.js</code> and save to reload.
+         </p>*/}
           
-          
+          {/*
           <LoginCtrls></LoginCtrls>
           <Menu floated='right' pagination>
             <Menu.Item as='a' icon>
@@ -222,9 +227,7 @@ const pageSize = 100;
               <Icon name='right chevron' />
             </Menu.Item>
           </Menu>
-          {/*<p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-         </p>*/}
+
 
           <Grid celled>
             <Grid.Row>
@@ -262,37 +265,245 @@ const pageSize = 100;
             </Grid.Row>
 
           </Grid>
+          */}
+
+          <div className="header">
+            <LoginCtrls/>
+            <div>
+                    <div>From:  
+                      <Input type='text' size='medium'  name="startHr" value={this.state.startHr}  onChange={this.handleInputChange} placeholder='12' action>
+                      <input size = '2'/>                  
+                      </Input> : 
+                      <Select compact name="startMin" value={this.state.startMin}  onChange={this.handleDropdownChange} options={halfhouroptions}  />
+                      <Select compact name="startAmPm" value={this.state.startAmPm} onChange={this.handleDropdownChange} options={apoptions}  />
+                      <p>for at least <input name="timeSpaninHr" value={this.state.timeSpaninHr} onChange={this.handleInputChange} placeholder='1' size = '2'/> hour</p>
+                      <Button onClick={() =>this.searchAvailRoom()}>Search</Button>  <Button>Show all</Button>
+                    </div>
+
+                  <Button onClick={()=>this.changeViewMode("day")}>Day</Button>
+                  <Button onClick={()=>this.changeViewMode("week")}>Week</Button>
+                  <Button onClick={()=>this.changeViewMode("month")}>Month</Button>
+                </div>
+
+          </div>
+         
+          <FlGrid bookingdata={this.state.bookingStatus}/>
+
+
+
+
+
+
         </div>
       );
     }
 
   }
-  /*
-  class TCell extends React.Component {
+
+  class FlGrid extends React.Component {
+    constructor (props) {
+      super(props);
+      this.state = {
+        bookingdata: '',
+        modalOpen: false,
+        selectedStartTime:"",
+        selectedroom:"",
+        selectedEndTIme:"",
+      };
+    }
+    componentDidMount () {
+      this.setState({bookingdata: this.props.bookingdata});
+    }
+
+    componentWillReceiveProps(newProps) {
+      this.setState({bookingdata: newProps.bookingdata});
+    }
+
+    handleOpen = (t,r) => {
+      console.log("t,r",t,r);
+      this.setState({ 
+        selectedStartTime: t,
+        selectedroom:r,
+        modalOpen: true 
+      })
+    }
+
+    handleClose = () => this.setState({ modalOpen: false })
+
+
     render() {
-      if (this.props.SpanOverride) {
-        return;
+      //this.props: rlist(array), colPerPage(int), pageNum(int)
+      console.log("this.props.bookingdata",this.props.bookingdata); // after update, this logs the updated name
+      console.log("this.state.bookingdata",this.state.bookingdata);
+      const hourRow = 24;
+      let colPerPage = 4;
+      let pageNum = 0;
+      let gridHeaders = [];
+      let gridcolumns = [];
+      let gridAxles = [];
+      let gridHoriLns = [];
+      let alldayevents = [];
+      
+      let momentParsera = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+      let totalItem = 12; // for test and debug only
+
+      gridHeaders.push(
+        <div className="gridHeaderfiller" key="filler">&nbsp;</div>
+      );
+
+      if (this.state.bookingdata){
+        var dict = this.state.bookingdata;
+        for(var key in dict){
+          gridHeaders.push(
+            <div className="gridHeaderblock" key={dict[key].Id}>{dict[key].Name}</div>
+          );
+        }
       } else {
-        return <Table.Cell rowSpan={this.props.rowspan} selectable={this.props.selectable}></Table.Cell>;
+        for (let i = 0; i<colPerPage; i++) {
+          gridHeaders.push(
+            <div className="gridHeaderblock" key={i}>No room selected</div>
+          );
+        }
       }
+
+      for (let a = 0 ; a < hourRow; a++){
+        gridAxles.push(
+          <div className="gridaxleblock" key={a}>{momentParsera.format("hh:mm a")}</div>
+        );
+        gridHoriLns.push(<div className="gridHoriLn" key={a}></div>);
+        momentParsera.add(1, "h");
+      }
+
+      
+
+      if (this.state.bookingdata){
+        let dict = this.state.bookingdata;
+        gridcolumns = [];       
+        for(let key in dict){
+          /*
+          var cellData = {rowSpan:1, selectable:true, cellTime:momentParser.format("hh:mm a"), roomId:dict[key].Id,  SpanOverride:false, value:"h="+momentParser.format("hh:mm a")+" roomid= "+dict[key].Id};          
+          row.push(cellData);
+          */
+          let gcCell = [];
+          let momentParser30m = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+          for (let h = 0 ; h < hourRow * 2; h++){
+            gcCell.push(<div className="gridCell" key={dict[key].Id+""+h}>{dict[key].Id+" "+momentParser30m.format("hh:mm a")}</div>)
+            momentParser30m.add(30, "m");
+          }
+          gridcolumns.push(<div className="gridCol" key={dict[key].Id}>{gcCell}</div>);
+        }
+      } else {
+        /*
+        for (let i = 0; i < totalItem; i++){
+          
+          var cellData = {
+            rowSpan:1, 
+            selectable:true, 
+            SpanOverride:false, 
+            //value:"h="+momentParser.format("hh:mm a")+" c= "+i
+          };          
+          row.push(cellData);            
+        }
+        */
+       
+
+        gridcolumns = [];
+        for (let g = 0; g < colPerPage; g++) {
+          let gcCell = [];
+          let momentParser30m = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+          for (let h = 0 ; h < hourRow * 2; h++){
+            let t = momentParser30m.format("hh:mm a");
+            gcCell.push(<div className="gridCell" key={g+""+h} onClick={() =>this.handleOpen(t, g)}>{g+" "+t}</div>)
+            momentParser30m.add(30, "m");
+          }
+          gridcolumns.push(<div className="gridCol" key={g}>{gcCell}</div>);
+        }
+      }
+      /*
+
+      for (let h = 0 ; h < hourRow * 2; h++){
+        
+        let row = [];
+        let hourCell = {rowSpan:1, selectable:false, SpanOverride:false, value:""};
+        if ( h % 2 == 0 ){
+          row.push({key:h, rowSpan:2, selectable:false, SpanOverride:false, value:momentParser.format("hh:mm a")});
+        } else if (h % 2 == 1) {
+          row.push({key:h, rowSpan:1, selectable:false, SpanOverride:true, value:"a"});
+        }
+        //momentParser.add(30, "m");
+
+        //console.log("datarow", row);
+        //rMatrixJSX.push(<TRowSlot key={"hour"+h} showbookingmodel={this.handleOpen} id={"hour"+h} rlist={row} colPerPage = {colPerPage} pageNum = {pageNum}/>)
+        //rMatrixJSX.push(<Table.Row><Table.Cell rowSpan = '1' selectable = 'true'></Table.Cell></Table.Row>);
+        
+      }*/
+      return (<div className="flbox">
+        <div className="gridheader">
+          <div className="gridheaderL1">
+          {gridHeaders}            
+          </div>          
+        </div>
+      <div className="gridbody">
+        <div className="gridbodyL1">
+          <div aria-hidden="true" className="gridHoriLns">
+            {gridHoriLns}
+          </div>
+          
+            <div className="gridaxle">
+              <div className="gridaxleL1">
+                {gridAxles}
+              </div>            
+            </div>
+            <div className="gridscolumn">
+              {gridcolumns}
+            </div>
+       
+        </div>        
+        
+      </div>
+        
+        
+        
+        {/*
+        <Table celled striped structured>
+        <Table.Header>
+        <Table.Row>
+        <Table.HeaderCell width={2} />
+        {rHeaders}
+        </Table.Row>
+        </Table.Header>
+        <Table.Body>
+        {rMatrixJSX}
+        </Table.Body>        
+      </Table>
+        */}
+      <Modal
+        trigger={<Button onClick={this.handleOpen}>Show Modal</Button>}
+        open={this.state.modalOpen}
+        onClose={this.handleClose}        
+        size='small'
+      >
+        <Header icon='browser' content='Cookies policy' />
+        <Modal.Content>
+          <h3>This website uses cookies to ensure the best user experience.</h3>
+          <p>Start time:{this.state.selectedStartTime} </p>
+          <p>Room:{this.state.selectedroom} </p>
+          <input type='text' size='medium'  name="endTime" value={this.state.selectedEndTime}  onChange={this.handleInputChange} placeholder='12'/>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button color='green' onClick={this.handleClose} inverted>
+            <Icon name='checkmark' /> Got it
+          </Button>
+          <Button color='grey' onClick={this.handleClose}>
+            <Icon name='checkmark' /> Cancel
+          </Button>
+        </Modal.Actions>
+      </Modal>
+
+      </div>);
     }
   }
 
-  class THeader extends React.Component {
-    render() {
-      //this.props: rlist(array), colPerPage(int), pageNum(int)
-      return <Table.Header>
-        <Table.Row>
-          <Table.HeaderCell width={2} />
-          <Table.HeaderCell>Study Space 1</Table.HeaderCell>
-          <Table.HeaderCell>Study Space 2</Table.HeaderCell>
-          <Table.HeaderCell>Study Space 3</Table.HeaderCell>
-          <Table.HeaderCell>Study Space 4</Table.HeaderCell>
-        </Table.Row>
-      </Table.Header>;
-    }
-  }
-  */
 
   class TRowSlot extends React.Component {
     constructor (props) {
@@ -341,7 +552,7 @@ const pageSize = 100;
       </Table.Row>;
     }
   }
-
+/*
   class TGrid extends React.Component {
     constructor (props) {
       super(props);
@@ -407,19 +618,16 @@ const pageSize = 100;
           row.push({key:h, rowSpan:2, selectable:false, SpanOverride:false, value:momentParser.format("hh:mm a")});
         } else if (h % 2 == 1) {
           row.push({key:h, rowSpan:1, selectable:false, SpanOverride:true, value:"a"});
-        }        
-        
-
-        
+        } 
         if (this.state.bookingdata){
-          var dict = this.state.bookingdata;          
-          for(var key in dict){
-            var cellData = {rowSpan:1, selectable:true, cellTime:momentParser.format("hh:mm a"), roomId:dict[key].Id,  SpanOverride:false, value:"h="+momentParser.format("hh:mm a")+" roomid= "+dict[key].Id};          
+          let dict = this.state.bookingdata;          
+          for(let key in dict){
+            let cellData = {rowSpan:1, selectable:true, cellTime:momentParser.format("hh:mm a"), roomId:dict[key].Id,  SpanOverride:false, value:"h="+momentParser.format("hh:mm a")+" roomid= "+dict[key].Id};          
             row.push(cellData);
           }
         } else {
           for (let i = 0; i < totalItem; i++){
-            var cellData = {
+            let cellData = {
               rowSpan:1, 
               selectable:true, 
               SpanOverride:false, 
@@ -470,6 +678,7 @@ const pageSize = 100;
       </div>);
     }
   }
+  */
 
   class LoginCtrls extends React.Component {
     constructor(props) {
