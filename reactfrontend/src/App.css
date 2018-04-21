@@ -126,6 +126,7 @@
     align-items: stretch;
     overflow: -moz-scrollbars-none;
     -ms-overflow-style: none;
+    line-height: 20px;
      
 }
 .gridbodyL1::-webkit-scrollbar {
@@ -210,7 +211,7 @@
   position: absolute;
   width: 100%;
   margin-top: -1px;
-  z-index: 3;
+  /*z-index: 3;*/
   pointer-events: none;
 }
 .gridCol{
@@ -225,4 +226,32 @@
 }
 .gridCell{
   
+}
+.blockedCell{
+  background: repeating-linear-gradient(
+  45deg,
+  /*
+  #606dbc,
+  #606dbc 10px,
+  #465298 10px,
+  #465298 14px
+  */
+  rgba(0, 0, 0, 0.2),
+  rgba(0, 0, 0, 0.2) 10px,
+  rgba(0, 0, 0, 0.3) 10px,
+  rgba(0, 0, 0, 0.3) 14px
+  );
+  z-index: 4;
+}
+.busi-hour{
+  background-color: #f0f0f0;
+}
+
+.selfbookedCell{
+  background:rgba(100, 150, 250, 0.8);
+  border-left: solid 5px #0a0a0a;
+  border-right: solid 1px #0a0a0a;
+}
+.availCell+.selfbookedCell, .blockedCell+.selfbookedCell{
+  border-top: solid 1px #0a0a0a;
 }
