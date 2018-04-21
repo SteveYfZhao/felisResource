@@ -93,6 +93,7 @@ const pageSize = 100;
     }
 
     handleDropdownChange = (e, target) => {
+      console.log("name", target.name, target.value)      
       this.setState({
         [target.name]: target.value
       });
@@ -309,7 +310,9 @@ const pageSize = 100;
         selectedStartTime:"",
         selectedroom:"",
         selectedEndTIme:"",
+        endTimeOption:[],
       };
+      this.handleDropdownChange = this.handleDropdownChange.bind(this);
     }
     componentDidMount () {
       this.setState({bookingdata: this.props.bookingdata});
@@ -319,16 +322,59 @@ const pageSize = 100;
       this.setState({bookingdata: newProps.bookingdata});
     }
 
-    handleOpen = (t,r) => {
-      console.log("t,r",t,r);
+    handleDropdownChange = (e, target) => {
+      console.log("name", target.name, target.value)      
+      this.setState({
+        [target.name]: target.value
+      });
+    }
+
+    handleModalOpen = (t,r) => {
+      //console.log("t,r",t,r);
+      let startT = t.format();
+      let endT = moment(t).add(1, "h").format();
+      let endOps = [];
+      const maxHrSpan = 8;
+
+      for (let h = 0; h<maxHrSpan*2; h++){
+        let tempMmt = moment(t);
+        tempMmt.add(30*(h+1), "m");
+        let opText = tempMmt.format("hh:mm a") + " " + 0.5*(h+1) + " Hr";
+        endOps.push({ key: h, text: opText, value: tempMmt.format() });
+      }
+
       this.setState({ 
-        selectedStartTime: t,
+        selectedStartTime: startT,
+        selectedEndTime: endT,
         selectedroom:r,
-        modalOpen: true 
+        modalOpen: true,
+        endTimeOption:endOps,
       })
     }
 
     handleClose = () => this.setState({ modalOpen: false })
+
+    bookres = (rid, stime, etime ) => {
+      var resp = null;
+      var self = this;
+      axios.post(serverProtocol + "://" + window.location.hostname + ':' + serverPortNum +'/getresbookingstatus', {
+        resourceid       :rid,
+        starttime   :stime,
+        endtime     :etime,
+        }, {withCredentials: true})
+      .then(function (response) {
+        console.log(response);
+        self.setState({
+          bookingStatus: response.data.Data
+        });
+        console.log("this.state.resp", self.state.resp);
+        resp = response;
+
+      })
+      .catch(function (error) {
+        console.log(error);
+      }); 
+    }
 
 
     render() {
@@ -370,7 +416,8 @@ const pageSize = 100;
         gridAxles.push(
           <div className="gridaxleblock" key={a}>{momentParsera.format("hh:mm a")}</div>
         );
-        gridHoriLns.push(<div className="gridHoriLn" key={a}></div>);
+
+          gridHoriLns.push(<div className="gridHoriLn" key={a}></div>);        
         momentParsera.add(1, "h");
       }
 
@@ -385,9 +432,67 @@ const pageSize = 100;
           row.push(cellData);
           */
           let gcCell = [];
-          let momentParser30m = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+          let bookedarr = dict[key].BookingStat.slice();
+          bookedarr = bookedarr.sort(function(a, b) {
+            let aST = moment(a.Bookstart);
+            let bST = moment(b.Bookstart);
+            if (aST.isBefore(bST)) {
+              return -1;
+            }
+            if (aST.isAfter(bST)) {
+              return 1;
+            }
+            return 0;
+          })
+          let momentParser30m = moment().startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+
+
           for (let h = 0 ; h < hourRow * 2; h++){
-            gcCell.push(<div className="gridCell" key={dict[key].Id+""+h}>{dict[key].Id+" "+momentParser30m.format("hh:mm a")}</div>)
+            let startT = moment(momentParser30m);
+            let t = momentParser30m.format("hh:mm a");
+            let pushedblocked = false;
+
+            
+
+            while (bookedarr.length>0){
+              // test first element of bookedarr, if fit, mark grid as blocked. If past time, pop element from bookedarr
+              
+              let booking = bookedarr[0];
+              let blockendT = moment(startT).add(30, "m");
+
+              let bkstrt = moment(booking.Bookstart);
+              let bkend = moment(booking.Bookend);
+
+              console.log("looping blocks1" + bookedarr.length);
+
+              //case 1 booking.Bookstart booking.Bookend
+              if (bkend.isSameOrBefore(startT)) {
+                bookedarr.shift();
+                console.log("looping blocks3", bookedarr);
+                
+                continue;
+              } else if (bkstrt.isBefore(blockendT)){
+                pushedblocked = true;
+                if (booking.Bookedforuser) {
+                  gcCell.push(<div className="gridCell selfbookedCell" key={dict[key].Id+""+h} onClick={() =>this.handleModalOpen(startT, dict[key].Id)}>
+                    {dict[key].Id+" "+t}
+                  </div>);
+                  break;
+                } else {
+                  gcCell.push(<div className="gridCell blockedCell" key={dict[key].Id+""+h} onClick={() =>this.handleModalOpen(startT, dict[key].Id)}>
+                    {dict[key].Id+" "+t}
+                  </div>);
+                  break;
+                }                          
+              }
+               
+              break;                   
+            }
+            if (!pushedblocked){
+              gcCell.push(<div className="gridCell availCell" key={dict[key].Id+""+h} onClick={() =>this.handleModalOpen(startT, dict[key].Id)}>
+              {dict[key].Id+" "+t}
+              </div>);
+            }
             momentParser30m.add(30, "m");
           }
           gridcolumns.push(<div className="gridCol" key={dict[key].Id}>{gcCell}</div>);
@@ -410,10 +515,26 @@ const pageSize = 100;
         gridcolumns = [];
         for (let g = 0; g < colPerPage; g++) {
           let gcCell = [];
-          let momentParser30m = moment("2015-01-01").startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+          let momentParser30m = moment().startOf('day'); //Set a fixed date to avoid leap year and daylightsaving issues.
+
+          
           for (let h = 0 ; h < hourRow * 2; h++){
             let t = momentParser30m.format("hh:mm a");
-            gcCell.push(<div className="gridCell" key={g+""+h} onClick={() =>this.handleOpen(t, g)}>{g+" "+t}</div>)
+            let startT = moment(momentParser30m);
+
+            
+            if (Math.random()>0.5){
+              gcCell.push(<div className="gridCell" key={g+""+h} onClick={() =>this.handleModalOpen(startT, g)}>{g+" "+t}</div>)
+              
+            } else {
+              let bookedText = "Occupied";
+              
+                gcCell.push(<div className="gridCell blockedCell" key={g+""+h}>&nbsp;</div>)
+             
+              
+              //prevBooked = true;
+            }
+            
             momentParser30m.add(30, "m");
           }
           gridcolumns.push(<div className="gridCol" key={g}>{gcCell}</div>);
@@ -478,7 +599,7 @@ const pageSize = 100;
       </Table>
         */}
       <Modal
-        trigger={<Button onClick={this.handleOpen}>Show Modal</Button>}
+        trigger={<Button onClick={this.handleModalOpen}>Show Modal</Button>}
         open={this.state.modalOpen}
         onClose={this.handleClose}        
         size='small'
@@ -486,9 +607,11 @@ const pageSize = 100;
         <Header icon='browser' content='Cookies policy' />
         <Modal.Content>
           <h3>This website uses cookies to ensure the best user experience.</h3>
-          <p>Start time:{this.state.selectedStartTime} </p>
+          <p>Start time:{moment(this.state.selectedStartTime).format("hh:mm a")} </p>
           <p>Room:{this.state.selectedroom} </p>
-          <input type='text' size='medium'  name="endTime" value={this.state.selectedEndTime}  onChange={this.handleInputChange} placeholder='12'/>
+          
+          <Select compact name="selectedEndTime" value={this.state.selectedEndTime} onChange={this.handleDropdownChange} options={this.state.endTimeOption}  />
+          
         </Modal.Content>
         <Modal.Actions>
           <Button color='green' onClick={this.handleClose} inverted>
@@ -504,7 +627,7 @@ const pageSize = 100;
     }
   }
 
-
+/*
   class TRowSlot extends React.Component {
     constructor (props) {
       super(props);
@@ -552,6 +675,7 @@ const pageSize = 100;
       </Table.Row>;
     }
   }
+  */
 /*
   class TGrid extends React.Component {
     constructor (props) {
